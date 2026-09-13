@@ -8,7 +8,8 @@ if (typeof google !== 'undefined' && google.charts) {
   google.charts.load('current', { packages: ['corechart'] });
   google.charts.setOnLoadCallback(() => {
     googleChartsLoaded = true;
-    if (typeof render === 'function') render();
+    // ⚠️ เพิ่ม && DATA เพื่อรอให้ข้อมูลโหลดเสร็จก่อน
+    if (typeof render === 'function' && DATA) render();
   });
 }
 
