@@ -1,23 +1,33 @@
 /* =====================================================================
    PASTEL WALLET — Entry Point
+   แก้ไข: เพิ่ม APP_READY flag + log เพื่อ debug
    ===================================================================== */
+
+let APP_READY = false;
 
 /**
  * เริ่มต้นแอปพลิเคชัน
  */
 async function init() {
-  if (CONFIG.USE_LOCAL_STORAGE) {
-    DATA = loadData();
-    render();
-  } else {
-    try {
+  try {
+    if (CONFIG.USE_LOCAL_STORAGE) {
+      console.log('📦 โหมด localStorage');
+      DATA = loadData();
+      console.log('✅ โหลดข้อมูลจาก localStorage สำเร็จ:', DATA);
+    } else {
+      console.log('📡 กำลังโหลดจาก API:', CONFIG.API_URL);
       DATA = await loadDataFromAPI();
-      render();
-    } catch (e) {
-      toast('โหลดข้อมูลไม่สำเร็จ: ' + e.message);
-      DATA = loadData(); // fallback
-      render();
+      console.log('✅ โหลดข้อมูลจาก API สำเร็จ:', DATA);
     }
+    APP_READY = true;
+    render();
+  } catch (e) {
+    console.error('❌ โหลดล้มเหลว:', e);
+    toast('โหลดข้อมูลไม่สำเร็จ: ' + e.message);
+    DATA = loadData(); // fallback
+    console.log('⚠️ ใช้ข้อมูล fallback:', DATA);
+    APP_READY = true;
+    render();
   }
 }
 
@@ -36,7 +46,7 @@ document.querySelectorAll('.filter-pill').forEach(b => {
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (typeof render === 'function') render(); }, 180);
+  resizeTimer = setTimeout(() => { if (APP_READY) render(); }, 180);
 });
 
 /* ---------- Event: ESC to close modal ---------- */
@@ -54,26 +64,6 @@ document.addEventListener('keydown', e => {
   if (fromEl) fromEl.value = past.toISOString().slice(0, 10);
   if (toEl) toEl.value = today.toISOString().slice(0, 10);
 })();
-async function init() {
-  if (CONFIG.USE_LOCAL_STORAGE) {
-    console.log('📦 โหมด localStorage');
-    DATA = loadData();
-    console.log('✅ โหลดข้อมูลจาก localStorage สำเร็จ:', DATA);
-    render();
-  } else {
-    try {
-      console.log('📡 กำลังโหลดจาก API:', CONFIG.API_URL);
-      DATA = await loadDataFromAPI();
-      console.log('✅ โหลดข้อมูลจาก API สำเร็จ:', DATA);
-      render();
-    } catch (e) {
-      console.error('❌ โหลด API ล้มเหลว:', e);
-      toast('โหลดข้อมูลไม่สำเร็จ: ' + e.message);
-      DATA = loadData(); // fallback
-      console.log('⚠️ ใช้ข้อมูล fallback:', DATA);
-      render();
-    }
-  }
-}
+
 /* ---------- Start app ---------- */
 init();
