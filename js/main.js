@@ -54,6 +54,26 @@ document.addEventListener('keydown', e => {
   if (fromEl) fromEl.value = past.toISOString().slice(0, 10);
   if (toEl) toEl.value = today.toISOString().slice(0, 10);
 })();
-
+async function init() {
+  if (CONFIG.USE_LOCAL_STORAGE) {
+    console.log('📦 โหมด localStorage');
+    DATA = loadData();
+    console.log('✅ โหลดข้อมูลจาก localStorage สำเร็จ:', DATA);
+    render();
+  } else {
+    try {
+      console.log('📡 กำลังโหลดจาก API:', CONFIG.API_URL);
+      DATA = await loadDataFromAPI();
+      console.log('✅ โหลดข้อมูลจาก API สำเร็จ:', DATA);
+      render();
+    } catch (e) {
+      console.error('❌ โหลด API ล้มเหลว:', e);
+      toast('โหลดข้อมูลไม่สำเร็จ: ' + e.message);
+      DATA = loadData(); // fallback
+      console.log('⚠️ ใช้ข้อมูล fallback:', DATA);
+      render();
+    }
+  }
+}
 /* ---------- Start app ---------- */
 init();
