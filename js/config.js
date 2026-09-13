@@ -8,9 +8,7 @@ const CONFIG = {
 
   // ถ้าต้องการใช้ Google Apps Script backend ให้ตั้งเป็น false
   // และระบุ API_URL ด้านล่าง
-  API_URL: 'https://script.google.com/macros/s/AKfycbwDV_G-UI_gez0cIb-Ijp01JEbwJnBZndgfgqUqApd9vQGYgC0M_GBMCE8nqyzV3RnD/exec'
-
-  STORAGE_KEY: 'pastel-wallet-data-v1',
+  API_URL :'https://script.google.com/macros/s/AKfycbwDV_G-UI_gez0cIb-Ijp01JEbwJnBZndgfgqUqApd9vQGYgC0M_GBMCE8nqyzV3RnD/exec',
 
   // ค่าเริ่มต้นสำหรับ filter
   DEFAULT_FILTER_DAYS: 90,
