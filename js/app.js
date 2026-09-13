@@ -71,7 +71,10 @@ function inRange(date) {
   return true;
 }
 
-function filtered() { return DATA.expenses.filter(x => inRange(x.date)); }
+function filtered() {
+  if (!DATA || !Array.isArray(DATA.expenses)) return [];
+  return DATA.expenses.filter(x => inRange(x.date));
+}
 
 function expensesFiltered() {
   if (activeFilter === 'all') return DATA.expenses.slice();
@@ -87,10 +90,19 @@ function applyFilter() { render(); toast('กรองข้อมูลแล�
 
 /* ---------- Main Render ---------- */
 function render() {
+  // ⚠️ Guard — ถ้า DATA ยังไม่พร้อม ให้ข้ามไปก่อน
+  if (!DATA || !Array.isArray(DATA.expenses)) {
+    console.warn('⏳ render() ถูกเรียกก่อนที่ DATA จะพร้อม — ข้ามไป');
+    return;
+  }
+
   let labels = { today: 'สรุปวันนี้', week: 'สรุป 7 วันล่าสุด', month30: 'สรุป 30 วัน',
                  month: 'สรุปเดือนนี้', year: 'สรุปปีนี้', all: 'สรุปทั้งหมด' };
   document.getElementById('periodLabel').textContent = labels[range] || 'สรุปวันนี้';
 
+  let xs = filtered();
+  ...
+}
   let xs = filtered();
   let total = xs.reduce((a, x) => a + Number(x.amount), 0);
   document.getElementById('total').textContent = money(total);
