@@ -1,5 +1,6 @@
 /* =====================================================================
    PASTEL WALLET — Main Application Logic
+   แก้ไข: เพิ่ม guard ใน filtered() และ render()
    ===================================================================== */
 
 /* ---------- State ---------- */
@@ -8,40 +9,48 @@ let editing = null;
 let activeFilter = '7d';
 
 /* ---------- CRUD Dispatcher ---------- */
-function call(fn, arg, done) {
+async function call(fn, arg, done) {
   try {
-    if (fn === 'saveExpense') {
-      if (arg.id) {
-        let idx = DATA.expenses.findIndex(x => x.id === arg.id);
-        if (idx > -1) DATA.expenses[idx] = { ...DATA.expenses[idx], ...arg, amount: Number(arg.amount) };
-      } else {
-        DATA.expenses.unshift({ ...arg, id: nextId('EXP'), amount: Number(arg.amount), createdAt: new Date().toISOString() });
+    if (CONFIG.USE_LOCAL_STORAGE) {
+      // ===== โหมด localStorage =====
+      if (fn === 'saveExpense') {
+        if (arg.id) {
+          let idx = DATA.expenses.findIndex(x => x.id === arg.id);
+          if (idx > -1) DATA.expenses[idx] = { ...DATA.expenses[idx], ...arg, amount: Number(arg.amount) };
+        } else {
+          DATA.expenses.unshift({ ...arg, id: nextId('EXP'), amount: Number(arg.amount), createdAt: new Date().toISOString() });
+        }
+      } else if (fn === 'deleteExpense') {
+        DATA.expenses = DATA.expenses.filter(x => x.id !== arg);
+      } else if (fn === 'saveCategory') {
+        if (arg.id) {
+          let idx = DATA.categories.findIndex(x => x.id === arg.id);
+          if (idx > -1) DATA.categories[idx] = { ...DATA.categories[idx], ...arg, monthlyBudget: Number(arg.monthlyBudget) };
+        } else {
+          DATA.categories.push({ ...arg, id: nextId('CAT'), monthlyBudget: Number(arg.monthlyBudget) });
+        }
+      } else if (fn === 'deleteCategory') {
+        DATA.categories = DATA.categories.filter(x => x.id !== arg);
+      } else if (fn === 'savePaymentType') {
+        if (arg.id) {
+          let idx = DATA.paymentTypes.findIndex(x => x.id === arg.id);
+          if (idx > -1) DATA.paymentTypes[idx] = { ...DATA.paymentTypes[idx], ...arg };
+        } else {
+          DATA.paymentTypes.push({ ...arg, id: nextId('PAY') });
+        }
+      } else if (fn === 'deletePaymentType') {
+        DATA.paymentTypes = DATA.paymentTypes.filter(x => x.id !== arg);
       }
-    } else if (fn === 'deleteExpense') {
-      DATA.expenses = DATA.expenses.filter(x => x.id !== arg);
-    } else if (fn === 'saveCategory') {
-      if (arg.id) {
-        let idx = DATA.categories.findIndex(x => x.id === arg.id);
-        if (idx > -1) DATA.categories[idx] = { ...DATA.categories[idx], ...arg, monthlyBudget: Number(arg.monthlyBudget) };
-      } else {
-        DATA.categories.push({ ...arg, id: nextId('CAT'), monthlyBudget: Number(arg.monthlyBudget) });
-      }
-    } else if (fn === 'deleteCategory') {
-      DATA.categories = DATA.categories.filter(x => x.id !== arg);
-    } else if (fn === 'savePaymentType') {
-      if (arg.id) {
-        let idx = DATA.paymentTypes.findIndex(x => x.id === arg.id);
-        if (idx > -1) DATA.paymentTypes[idx] = { ...DATA.paymentTypes[idx], ...arg };
-      } else {
-        DATA.paymentTypes.push({ ...arg, id: nextId('PAY') });
-      }
-    } else if (fn === 'deletePaymentType') {
-      DATA.paymentTypes = DATA.paymentTypes.filter(x => x.id !== arg);
+      persistData();
+    } else {
+      // ===== โหมด API =====
+      await callAPI(fn, arg);
+      DATA = await loadDataFromAPI();
     }
-    persistData();
     render();
     if (done) done(DATA);
   } catch (e) {
+    console.error('call() error:', e);
     toast(e.message || String(e));
   }
 }
@@ -71,12 +80,14 @@ function inRange(date) {
   return true;
 }
 
+// ⚠️ FIX: เพิ่ม guard ป้องกัน DATA = null
 function filtered() {
   if (!DATA || !Array.isArray(DATA.expenses)) return [];
   return DATA.expenses.filter(x => inRange(x.date));
 }
 
 function expensesFiltered() {
+  if (!DATA || !Array.isArray(DATA.expenses)) return [];
   if (activeFilter === 'all') return DATA.expenses.slice();
   let now = new Date();
   let today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -90,7 +101,7 @@ function applyFilter() { render(); toast('กรองข้อมูลแล�
 
 /* ---------- Main Render ---------- */
 function render() {
-  // ⚠️ Guard — ถ้า DATA ยังไม่พร้อม ให้ข้ามไปก่อน
+  // ⚠️ FIX: guard — ถ้า DATA ยังไม่พร้อม ให้ข้าม
   if (!DATA || !Array.isArray(DATA.expenses)) {
     console.warn('⏳ render() ถูกเรียกก่อนที่ DATA จะพร้อม — ข้ามไป');
     return;
@@ -100,9 +111,6 @@ function render() {
                  month: 'สรุปเดือนนี้', year: 'สรุปปีนี้', all: 'สรุปทั้งหมด' };
   document.getElementById('periodLabel').textContent = labels[range] || 'สรุปวันนี้';
 
-  let xs = filtered();
-  ...
-}
   let xs = filtered();
   let total = xs.reduce((a, x) => a + Number(x.amount), 0);
   document.getElementById('total').textContent = money(total);
@@ -140,6 +148,7 @@ function render() {
 
 /* ---------- Expense List ---------- */
 function renderExpenseList() {
+  if (!DATA || !Array.isArray(DATA.expenses)) return;
   let catSel = document.getElementById('filterCategory');
   if (catSel) {
     let cur = catSel.value;
@@ -210,6 +219,7 @@ function expItemHtml(x) {
 
 /* ---------- Budgets ---------- */
 function renderBudgets(sums) {
+  if (!DATA || !Array.isArray(DATA.categories)) return;
   let cats = DATA.categories.filter(c => c.isActive);
   document.getElementById('budgetList').innerHTML = cats.map(c => {
     let used = Number(sums[c.name] || 0), budget = Number(c.monthlyBudget || 0);
@@ -237,6 +247,7 @@ function renderBudgets(sums) {
 
 /* ---------- Settings ---------- */
 function renderSettings() {
+  if (!DATA || !Array.isArray(DATA.categories)) return;
   document.getElementById('categoryList').innerHTML = DATA.categories.map(c => `
     <div class="glass rounded-xl p-2.5 flex items-center gap-2.5">
       <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style="background: ${getCatColor(c.name)}18; color: ${getCatColor(c.name)};">
@@ -277,6 +288,7 @@ function renderSettings() {
 
 /* ---------- Compare Stats ---------- */
 function updateCompareStats() {
+  if (!DATA || !Array.isArray(DATA.expenses)) return;
   let now = new Date();
   let today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   let todayIso = isoDate(today);
