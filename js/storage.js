@@ -1,6 +1,6 @@
 /* =====================================================================
    PASTEL WALLET — Storage Layer
-   จัดการโหลด/บันทึกข้อมูล (localStorage หรือ API)
+   แก้ไข: ใช้ JSONP สำหรับ getData เลี่ยง CORS
    ===================================================================== */
 
 let DATA = null;
@@ -10,7 +10,6 @@ let DATA = null;
  */
 function loadData() {
   if (!CONFIG.USE_LOCAL_STORAGE) {
-    // โหมด API — จะโหลดแบบ async ใน main.js
     return { expenses: [], categories: [], paymentTypes: [] };
   }
   try {
@@ -54,28 +53,60 @@ function nextId(prefix) {
 }
 
 /**
- * โหลดข้อมูลจาก API (Google Apps Script)
+ * โหลดข้อมูลจาก API ด้วย JSONP (เลี่ยง CORS)
  */
-async function loadDataFromAPI() {
-  const res = await fetch(CONFIG.API_URL + '?action=getData');
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || 'โหลดข้อมูลไม่สำเร็จ');
-  return {
-    expenses: json.expenses,
-    categories: json.categories,
-    paymentTypes: json.paymentTypes
-  };
+function loadDataFromAPI() {
+  return new Promise((resolve, reject) => {
+    const cbName = 'pastelCb_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    let script = document.createElement('script');
+
+    window[cbName] = (json) => {
+      try {
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        if (!json || !json.ok) {
+          return reject(new Error((json && json.error) || 'โหลดข้อมูลไม่สำเร็จ'));
+        }
+        resolve({
+          expenses: json.expenses || [],
+          categories: json.categories || [],
+          paymentTypes: json.paymentTypes || []
+        });
+      } catch (e) {
+        reject(e);
+      }
+    };
+
+    script.src = CONFIG.API_URL + '?action=getData&callback=' + cbName;
+    script.onerror = () => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      reject(new Error('ไม่สามารถเชื่อมต่อ API'));
+    };
+
+    // timeout 15 วินาที
+    setTimeout(() => {
+      if (window[cbName]) {
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        reject(new Error('API timeout'));
+      }
+    }, 15000);
+
+    document.body.appendChild(script);
+  });
 }
 
 /**
- * ส่งข้อมูลไป API
+ * ส่งข้อมูลไป API (no-cors — fire and forget)
  */
 async function callAPI(action, payload) {
-  const res = await fetch(CONFIG.API_URL, {
+  await fetch(CONFIG.API_URL, {
     method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action, data: payload })
   });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json.error || 'เกิดข้อผิดพลาด');
-  return json;
+  // no-cors อ่าน response ไม่ได้ — assume ok
+  return { ok: true };
 }
