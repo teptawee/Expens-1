@@ -1,5 +1,6 @@
 /* =====================================================================
    PASTEL WALLET — Charts (Google Charts + SVG Fallback)
+   แก้ไข: เพิ่ม guard && DATA ใน setOnLoadCallback
    ===================================================================== */
 
 let googleChartsLoaded = false;
@@ -8,8 +9,12 @@ if (typeof google !== 'undefined' && google.charts) {
   google.charts.load('current', { packages: ['corechart'] });
   google.charts.setOnLoadCallback(() => {
     googleChartsLoaded = true;
-    // ⚠️ เพิ่ม && DATA เพื่อรอให้ข้อมูลโหลดเสร็จก่อน
-    if (typeof render === 'function' && DATA) render();
+    // ⚠️ FIX: รอให้ DATA พร้อมก่อน render
+    if (typeof render === 'function' && typeof DATA !== 'undefined' && DATA) {
+      render();
+    } else {
+      console.log('⏳ Google Charts โหลดเสร็จ แต่ DATA ยังไม่พร้อม — รอ init()');
+    }
   });
 }
 
@@ -171,6 +176,7 @@ function drawChartAt(targetId, type, xs, sums, pays) {
       );
     }
   } catch (err) {
+    console.error('Chart error:', err);
     renderFallbackSVG(el, type, xs, sums, pays);
   }
 }
