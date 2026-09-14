@@ -101,12 +101,12 @@ function loadDataFromAPI() {
  * ส่งข้อมูลไป API (no-cors — fire and forget)
  */
 async function callAPI(action, payload) {
-  await fetch(CONFIG.API_URL, {
+  const res = await fetch(CONFIG.API_URL, {
     method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action, data: payload })
   });
-  // no-cors อ่าน response ไม่ได้ — assume ok
-  return { ok: true };
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'API error');
+  return json;
 }
