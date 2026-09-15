@@ -447,4 +447,317 @@ function renderRecent() {
     const sum = groups[yesterdayIso].reduce((a, x) => a + Number(x.amount), 0);
     html += `
       <div class="recent-day">
-        <div class="rd-label"><span class="rd-dot" style="background: linear-gradient(135deg, #c4b5fd, #a78bfa);
+        <div class="rd-label"><span class="rd-dot" style="background: linear-gradient(135deg, #c4b5fd, #a78bfa);"></span>${dayLabel(yesterdayIso)} · ${dateShort(yesterdayIso)}</div>
+        <div class="rd-total">${money(sum)}</div>
+      </div>
+      ${groups[yesterdayIso]
+        .sort((a, b) => Number(b.amount) - Number(a.amount))
+        .map(recentItemHtml).join('')}
+    `;
+  }
+
+  el.innerHTML = html;
+}
+
+function recentItemHtml(x) {
+  let c = DATA.categories.find(c => c.name === x.category);
+  let catColor = getCatColor(x.category);
+  let pt = DATA.paymentTypes.find(p => p.name === x.paymentType);
+  let payIcon = (pt && pt.icon) || 'fa-money-bill-wave';
+
+  return `
+    <div class="recent-item">
+      <div class="ri-icon" style="background: linear-gradient(135deg, ${catColor}, ${catColor}cc);">
+        <i class="fa-solid ${icon(c && c.icon)}"></i>
+      </div>
+      <div class="ri-body">
+        <div class="ri-title">${esc(x.description || x.category)}</div>
+        <div class="ri-meta">
+          <span class="ri-pay"><i class="fa-solid ${payIcon}"></i> ${esc(x.paymentType || 'เงินสด')}</span>
+          <span>·</span>
+          <span>${esc(x.category)}</span>
+        </div>
+      </div>
+      <div class="ri-amount">${money(x.amount)}</div>
+    </div>
+  `;
+}
+
+/* ---------- Settings ---------- */
+function renderSettings() {
+  if (!DATA || !Array.isArray(DATA.categories)) return;
+
+  const catEl = document.getElementById('categoryList');
+  if (catEl) {
+    catEl.innerHTML = DATA.categories.map(c => `
+      <div class="glass rounded-xl p-2.5 flex items-center gap-2.5" style="display:flex;align-items:center;gap:10px;padding:10px;">
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background: ${getCatColor(c.name)}18; color: ${getCatColor(c.name)};">
+          <i class="fa-solid ${icon(c.icon)}"></i>
+        </div>
+        <div class="flex-1 min-w-0" style="flex:1;min-width:0;">
+          <h4 class="font-bold text-slate-800 text-[12.5px] truncate" style="font-weight:800;color:#1e293b;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.name)}</h4>
+          <p class="text-[9.5px] text-slate-400 mt-0.5" style="font-size:9.5px;color:#94a3b8;margin-top:2px;">งบ ${money(c.monthlyBudget)}</p>
+        </div>
+        <div class="flex items-center gap-1 flex-shrink-0" style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+          <button onclick="openCategory('${esc(c.id)}')" style="width:28px;height:28px;border-radius:8px;background:#f3e8ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:10px;">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button onclick="removeCategory('${esc(c.id)}')" style="width:28px;height:28px;border-radius:8px;background:#ffe4e6;color:#e11d48;display:flex;align-items:center;justify-content:center;font-size:10px;">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  const payEl = document.getElementById('paymentList');
+  if (payEl) {
+    payEl.innerHTML = DATA.paymentTypes.map(p => `
+      <div class="glass rounded-xl p-2.5 flex items-center gap-2.5" style="display:flex;align-items:center;gap:10px;padding:10px;">
+        <div class="w-9 h-9 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center text-sm flex-shrink-0" style="width:36px;height:36px;border-radius:10px;background:#cffafe;color:#0e7490;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
+          <i class="fa-solid ${icon(p.icon)}"></i>
+        </div>
+        <h4 class="font-bold text-slate-800 text-[12.5px] truncate flex-1" style="font-weight:800;color:#1e293b;font-size:12.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</h4>
+        <div class="flex items-center gap-1 flex-shrink-0" style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+          <button onclick="openPayment('${esc(p.id)}')" style="width:28px;height:28px;border-radius:8px;background:#f3e8ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:10px;">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button onclick="removePayment('${esc(p.id)}')" style="width:28px;height:28px;border-radius:8px;background:#ffe4e6;color:#e11d48;display:flex;align-items:center;justify-content:center;font-size:10px;">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+/* ---------- Compare Stats ---------- */
+function updateCompareStats() {
+  if (!DATA || !Array.isArray(DATA.expenses)) return;
+
+  let now = new Date();
+  let today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let todayIso = isoDate(today);
+  let yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  let yestIso = isoDate(yesterday);
+  let todayVal = sumInDates(todayIso, todayIso);
+  let yestVal = sumInDates(yestIso, yestIso);
+
+  const stvEl = document.getElementById('statTodayVal');
+  const stbEl = document.getElementById('statTodayBadge');
+  const stcEl = document.getElementById('statTodayCompare');
+  if (stvEl) stvEl.textContent = fmtNum(todayVal);
+  if (stbEl) stbEl.innerHTML = badgeHtml(pctChange(todayVal, yestVal), yestVal === 0 && todayVal > 0);
+  if (stcEl) stcEl.textContent = yestVal === 0 ? 'ยังไม่มีข้อมูลเมื่อวาน' : `เมื่อวาน: ${fmtNum(yestVal)} บาท`;
+
+  let dayOfWeek = today.getDay() || 7;
+  let weekStart = new Date(today); weekStart.setDate(today.getDate() - (dayOfWeek - 1));
+  let weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+  let weekVal = sumInDates(isoDate(weekStart), isoDate(weekEnd));
+  let prevWeekStart = new Date(weekStart); prevWeekStart.setDate(weekStart.getDate() - 7);
+  let prevWeekEnd = new Date(weekStart); prevWeekEnd.setDate(weekStart.getDate() - 1);
+  let prevWeekVal = sumInDates(isoDate(prevWeekStart), isoDate(prevWeekEnd));
+
+  const swvEl = document.getElementById('statWeekVal');
+  const swbEl = document.getElementById('statWeekBadge');
+  const swcEl = document.getElementById('statWeekCompare');
+  if (swvEl) swvEl.textContent = fmtNum(weekVal);
+  if (swbEl) swbEl.innerHTML = badgeHtml(pctChange(weekVal, prevWeekVal), prevWeekVal === 0 && weekVal > 0);
+  if (swcEl) swcEl.textContent = prevWeekVal === 0 ? 'ยังไม่มีข้อมูลสัปดาห์ก่อน' : `สัปดาห์ก่อน: ${fmtNum(prevWeekVal)} บาท`;
+
+  let monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  let monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  let monthVal = sumInDates(isoDate(monthStart), isoDate(monthEnd));
+  let prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  let prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  let prevMonthVal = sumInDates(isoDate(prevMonthStart), isoDate(prevMonthEnd));
+
+  const smvEl = document.getElementById('statMonthVal');
+  const smbEl = document.getElementById('statMonthBadge');
+  const smcEl = document.getElementById('statMonthCompare');
+  if (smvEl) smvEl.textContent = fmtNum(monthVal);
+  if (smbEl) smbEl.innerHTML = badgeHtml(pctChange(monthVal, prevMonthVal), prevMonthVal === 0 && monthVal > 0);
+  if (smcEl) smcEl.textContent = prevMonthVal === 0 ? 'ยังไม่มีข้อมูลเดือนก่อน' : `เดือนก่อน: ${fmtNum(prevMonthVal)} บาท`;
+}
+
+/* ---------- Modals: Expense ---------- */
+function openExpense(id) {
+  editing = DATA.expenses.find(x => x.id === id) || null;
+  document.getElementById('modalBody').innerHTML = `
+    <h2 style="font-size:16px;font-weight:900;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <span style="width:32px;height:32px;border-radius:10px;background:#fce7f3;color:#db2777;display:flex;align-items:center;justify-content:center;font-size:12px;">
+        <i class="fa-solid ${editing ? 'fa-pen-to-square' : 'fa-plus'}"></i>
+      </span>
+      ${editing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่'}
+    </h2>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">วันที่</label>
+          <input id="fDate" type="date" value="${editing ? editing.date : new Date().toISOString().slice(0, 10)}" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">จำนวนเงิน (บาท)</label>
+          <input id="fAmount" type="number" min="0" step="0.01" value="${editing ? editing.amount : ''}" placeholder="0.00" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;">
+        </div>
+      </div>
+      <div>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">หมวดหมู่</label>
+        <select id="fCat" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
+          ${DATA.categories.filter(x => x.isActive).map(x => `<option ${editing && editing.category === x.name ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">วิธีชำระเงิน</label>
+        <select id="fPay" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
+          ${DATA.paymentTypes.filter(x => x.isActive).map(x => `<option ${editing && editing.paymentType === x.name ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">รายละเอียด</label>
+        <input id="fDesc" value="${editing ? esc(editing.description) : ''}" placeholder="เช่น ข้าวกะเพรา, ชานมไข่มุก" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
+      </div>
+      <div>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">หมายเหตุ</label>
+        <textarea id="fNote" rows="2" placeholder="ระบุเพิ่มเติม (ไม่บังคับ)" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">${editing ? esc(editing.note || '') : ''}</textarea>
+      </div>
+      <button onclick="saveExpense()" style="width:100%;background:linear-gradient(135deg,#ec4899,#a855f7);color:white;font-weight:700;padding:12px;border-radius:16px;box-shadow:0 8px 20px -6px rgba(236,72,153,0.4);font-size:13px;cursor:pointer;margin-top:4px;">
+        <i class="fa-solid fa-check" style="margin-right:6px;"></i> บันทึกรายการ
+      </button>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+function saveExpense() {
+  let x = { id: editing && editing.id, date: fDate.value, amount: fAmount.value,
+            category: fCat.value, paymentType: fPay.value,
+            description: fDesc.value, note: fNote.value };
+  if (!x.date || !x.amount || !x.category || !x.paymentType) { toast('กรุณากรอกข้อมูลให้ครบ'); return; }
+  call('saveExpense', x, () => { closeModal(); successPopup('บันทึกรายการเรียบร้อยแล้ว'); });
+}
+
+function removeExpense(id) {
+  if (confirm('ลบรายการนี้ใช่หรือไม่?')) call('deleteExpense', id, () => successPopup('ลบข้อมูลเรียบร้อยแล้ว'));
+}
+
+/* ---------- Modals: Category ---------- */
+function openCategory(id) {
+  editing = DATA.categories.find(x => x.id === id) || null;
+  document.getElementById('modalBody').innerHTML = `
+    <h2 style="font-size:16px;font-weight:900;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <span style="width:32px;height:32px;border-radius:10px;background:#f3e8ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:12px;">
+        <i class="fa-solid fa-layer-group"></i>
+      </span>
+      ${editing ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่ใหม่'}
+    </h2>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">ชื่อหมวดหมู่</label>
+        <input id="cName" value="${editing ? esc(editing.name) : ''}" placeholder="เช่น ช้อปปิ้ง, ค่ารักษา" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
+      </div>
+      <div>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">งบประมาณต่อเดือน (บาท)</label>
+        <input id="cBudget" type="number" value="${editing ? editing.monthlyBudget : 0}" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;">
+      </div>
+      <div>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">ไอคอน Font Awesome</label>
+        <input id="cIcon" value="${editing ? esc(editing.icon) : 'fa-shapes'}" placeholder="fa-utensils, fa-tag" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
+      </div>
+      <button onclick="saveCategory()" style="width:100%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;font-weight:700;padding:12px;border-radius:16px;box-shadow:0 8px 20px -6px rgba(124,58,237,0.4);font-size:13px;cursor:pointer;margin-top:4px;">
+        บันทึกหมวดหมู่
+      </button>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+function saveCategory() {
+  if (!cName.value) { toast('กรุณาระบุชื่อหมวดหมู่'); return; }
+  call('saveCategory', { id: editing && editing.id, name: cName.value, monthlyBudget: cBudget.value, icon: cIcon.value, isActive: true },
+       () => { closeModal(); successPopup('บันทึกหมวดหมู่เรียบร้อยแล้ว'); });
+}
+
+function removeCategory(id) {
+  if (confirm('ลบหมวดหมู่นี้ใช่หรือไม่?')) call('deleteCategory', id, () => successPopup('ลบข้อมูลเรียบร้อยแล้ว'));
+}
+
+/* ---------- Modals: Payment ---------- */
+function openPayment(id) {
+  editing = DATA.paymentTypes.find(x => x.id === id) || null;
+  document.getElementById('modalBody').innerHTML = `
+    <h2 style="font-size:16px;font-weight:900;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <span style="width:32px;height:32px;border-radius:10px;background:#cffafe;color:#0e7490;display:flex;align-items:center;justify-content:center;font-size:12px;">
+        <i class="fa-solid fa-credit-card"></i>
+      </span>
+      ${editing ? 'แก้ไขวิธีชำระ' : 'เพิ่มวิธีชำระใหม่'}
+    </h2>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">ชื่อวิธีชำระเงิน</label>
+        <input id="pName" value="${editing ? esc(editing.name) : ''}" placeholder="เช่น พร้อมเพย์, เงินสด" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
+      </div>
+      <div>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">ไอคอน Font Awesome</label>
+        <input id="pIcon" value="${editing ? esc(editing.icon) : 'fa-wallet'}" placeholder="fa-wallet, fa-qrcode" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
+      </div>
+      <button onclick="savePayment()" style="width:100%;background:linear-gradient(135deg,#06b6d4,#2563eb);color:white;font-weight:700;padding:12px;border-radius:16px;box-shadow:0 8px 20px -6px rgba(6,182,212,0.4);font-size:13px;cursor:pointer;margin-top:4px;">
+        บันทึกวิธีชำระเงิน
+      </button>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+function savePayment() {
+  if (!pName.value) { toast('กรุณาระบุชื่อวิธีชำระเงิน'); return; }
+  call('savePaymentType', { id: editing && editing.id, name: pName.value, icon: pIcon.value, isActive: true },
+       () => { closeModal(); successPopup('บันทึกวิธีชำระเงินเรียบร้อยแล้ว'); });
+}
+
+function removePayment(id) {
+  if (confirm('ลบวิธีชำระเงินนี้ใช่หรือไม่?')) call('deletePaymentType', id, () => successPopup('ลบข้อมูลเรียบร้อยแล้ว'));
+}
+
+/* ---------- Data import / export ---------- */
+function exportData() {
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const today = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `pastel-wallet-backup-${today}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('ส่งออกข้อมูลเรียบร้อยแล้ว');
+}
+
+function importData(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!parsed.expenses || !parsed.categories || !parsed.paymentTypes) throw new Error('รูปแบบไฟล์ไม่ถูกต้อง');
+      if (!confirm('การนำเข้าจะเขียนทับข้อมูลปัจจุบันทั้งหมด ยืนยันหรือไม่?')) return;
+      DATA = parsed;
+      persistData();
+      render();
+      successPopup('นำเข้าข้อมูลเรียบร้อยแล้ว');
+    } catch (err) { toast('ไฟล์ไม่ถูกต้อง: ' + err.message); }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+
+function resetAll() {
+  if (!confirm('คืนค่าเป็นข้อมูลตัวอย่างเริ่มต้นใช่หรือไม่? (ข้อมูลปัจจุบันจะหายทั้งหมด)')) return;
+  localStorage.removeItem(CONFIG.STORAGE_KEY);
+  DATA = loadData();
+  persistData();
+  render();
+  successPopup('คืนค่าเริ่มต้นเรียบร้อยแล้ว');
+}
