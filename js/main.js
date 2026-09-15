@@ -27,30 +27,26 @@ async function init() {
   }
 }
 
-/* ---------- Event: Filter Pills ---------- */
 document.querySelectorAll('.filter-pill').forEach(b => {
   b.onclick = () => {
     let parent = b.parentElement;
     parent.querySelectorAll('.filter-pill').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
-    if (b.dataset.range) { range = b.dataset.range; render(); }
+    if (b.dataset.range)  { range = b.dataset.range; render(); }
     if (b.dataset.filter) { activeFilter = b.dataset.filter; render(); }
   };
 });
 
-/* ---------- Event: Resize ---------- */
 let resizeTimer;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => { if (APP_READY) render(); }, 180);
 });
 
-/* ---------- Event: ESC to close modal ---------- */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModal();
 });
 
-/* ---------- Set default filter dates ---------- */
 (function setDefaults() {
   let today = new Date();
   let past = new Date();
@@ -61,5 +57,4 @@ document.addEventListener('keydown', e => {
   if (toEl) toEl.value = today.toISOString().slice(0, 10);
 })();
 
-/* ---------- Start app ---------- */
 init();
