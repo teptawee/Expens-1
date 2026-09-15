@@ -128,6 +128,7 @@ function render() {
   let top = Object.entries(sums).sort((a, b) => b[1] - a[1])[0];
 
   renderBudgets(sums);
+  renderStatus(sums);
   document.getElementById('topCat').textContent = top ? esc(top[0]) : '-';
 
   renderRecent();
@@ -174,7 +175,7 @@ function renderExpenseList() {
   }).join('');
 
   document.getElementById('expenseList').innerHTML = html
-    || '<div class="text-center py-12 text-slate-400 glass-soft rounded-2xl border border-dashed border-purple-200 text-xs">ไม่พบรายการ</div>';
+    || '<div class="text-center py-12 text-slate-400 glass-soft rounded-2xl border border-dashed border-purple-200 text-xs" style="padding:48px 12px; text-align:center; color:#94a3b8;">ไม่พบรายการ</div>';
 }
 
 function expItemHtml(x) {
@@ -250,12 +251,154 @@ function renderBudgets(sums) {
       </div>
     `;
   }).join('') || `
-    <div class="recent-empty md:col-span-2">
+    <div class="recent-empty md:col-span-2" style="grid-column:1/-1;">
       <i class="fa-solid fa-bullseye"></i>
       ยังไม่มีข้อมูลงบประมาณ
     </div>
   `;
 }
+
+/* ---------- Status Wallet — สถานะวงเงินคงเหลือ ---------- */
+function renderStatus(sums) {
+  if (!DATA || !Array.isArray(DATA.categories)) return;
+
+  const cats = DATA.categories.filter(c => c.isActive && Number(c.monthlyBudget) > 0);
+  const el = document.getElementById('statusGrid');
+  if (!el) return;
+
+  // ---- Summary ด้านบน ----
+  const now = new Date();
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const daysLeft = Math.max(0, Math.ceil((monthEnd - now) / (1000 * 60 * 60 * 24)) + 1);
+
+  const totalBudget = cats.reduce((a, c) => a + Number(c.monthlyBudget), 0);
+  const totalUsed   = cats.reduce((a, c) => a + Number(sums[c.name] || 0), 0);
+  const totalPct    = totalBudget ? (totalUsed / totalBudget) * 100 : 0;
+
+  let statusText = 'อยู่ในเกณฑ์ดี';
+  if (totalPct >= 100)      statusText = 'เกินงบแล้ว';
+  else if (totalPct >= 80)  statusText = 'ใกล้เต็มแล้ว';
+  else if (totalPct >= 50)  statusText = 'ใช้จ่ายปานกลาง';
+
+  const statusTextEl = document.getElementById('statusStatusText');
+  const daysLeftEl   = document.getElementById('statusDaysLeft');
+  const usedEl       = document.getElementById('statusUsed');
+  const totalEl      = document.getElementById('statusTotal');
+  const pctEl        = document.getElementById('statusPercent');
+
+  if (statusTextEl) statusTextEl.textContent = statusText;
+  if (daysLeftEl)   daysLeftEl.textContent   = daysLeft > 0 ? `เหลืออีก ${daysLeft} วัน` : 'สิ้นเดือนแล้ว';
+  if (usedEl)       usedEl.textContent        = fmtNum(totalUsed);
+  if (totalEl)      totalEl.textContent       = fmtNum(totalBudget);
+  if (pctEl)        pctEl.textContent         = `(${totalPct.toFixed(1)}%)`;
+
+  // ---- คำนวณแต่ละการ์ด ----
+  let cards = cats.map(c => {
+    const used   = Number(sums[c.name] || 0);
+    const budget = Number(c.monthlyBudget);
+    const remain = Math.max(0, budget - used);
+    const pctUsed   = budget ? (used / budget) * 100 : 0;
+    const pctRemain = budget ? (remain / budget) * 100 : 0;
+
+    let state = 'safe';
+    if (pctUsed >= 100)      state = 'over';
+    else if (pctUsed >= 80)  state = 'warning';
+
+    return {
+      name: c.name,
+      icon: c.icon,
+      used, budget, remain,
+      pctUsed, pctRemain,
+      state,
+      color: getCatColor(c.name)
+    };
+  });
+
+  // ---- Filter ตาม tab ----
+  let filteredCards = cards;
+  if (statusTab === 'warning')      filteredCards = cards.filter(c => c.state === 'warning');
+  else if (statusTab === 'over')    filteredCards = cards.filter(c => c.state === 'over');
+
+  // ---- เรียง: เกินงบ > ใกล้เต็ม > ปกติ, แล้วตาม % มากไปน้อย ----
+  const order = { over: 0, warning: 1, safe: 2 };
+  filteredCards.sort((a, b) => {
+    if (order[a.state] !== order[b.state]) return order[a.state] - order[b.state];
+    return b.pctUsed - a.pctUsed;
+  });
+
+  // ---- Render ----
+  if (filteredCards.length === 0) {
+    const msg = statusTab === 'warning'
+      ? 'ไม่มีหมวดที่ใกล้เต็ม'
+      : statusTab === 'over'
+        ? 'ไม่มีหมวดที่เกินงบ 🎉'
+        : 'ยังไม่มีหมวดที่มีงบประมาณ';
+    el.innerHTML = `
+      <div class="recent-empty" style="grid-column: 1 / -1;">
+        <i class="fa-solid fa-piggy-bank"></i>
+        ${msg}
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = filteredCards.map(c => {
+    const showPct = c.state === 'over' ? c.pctUsed.toFixed(1) : c.pctRemain.toFixed(1);
+
+    const remainText = c.state === 'over'
+      ? `เกินงบ ${fmtNum(c.used - c.budget)}`
+      : `คงเหลือ ${Math.round(c.pctRemain)}%`;
+
+    const barWidth = Math.min(100, c.pctUsed);
+
+    return `
+      <div class="status-card" data-state="${c.state}">
+        <div class="sc-head">
+          <div class="sc-icon" style="background: linear-gradient(135deg, ${c.color}, ${c.color}cc);">
+            <i class="fa-solid ${icon(c.icon)}"></i>
+          </div>
+          <div class="sc-title">
+            <div class="sc-name">${esc(c.name)}</div>
+            <div class="sc-remain-text">${remainText}</div>
+          </div>
+          <div class="sc-percent">${showPct}%</div>
+        </div>
+
+        <div class="sc-stats">
+          <div class="sc-stat">
+            <div class="sc-stat-label"><i class="fa-solid fa-droplet ic-use"></i> ใช้ไป</div>
+            <div class="sc-stat-value use num">฿${fmtNum(c.used)}</div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-stat-label"><i class="fa-solid fa-circle-dot ic-limit"></i> วงเงิน</div>
+            <div class="sc-stat-value limit num">฿${fmtNum(c.budget)}</div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-stat-label"><i class="fa-solid fa-fire ic-remain"></i> คงเหลือ</div>
+            <div class="sc-stat-value remain num">฿${fmtNum(c.remain)}</div>
+          </div>
+        </div>
+
+        <div class="sc-progress">
+          <div class="sc-progress-fill" style="width: ${barWidth}%;"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ---------- Status tabs binding ---------- */
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest && e.target.closest('.status-tab');
+  if (!btn) return;
+  document.querySelectorAll('.status-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  statusTab = btn.dataset.tab || 'all';
+  const xs = filtered();
+  let sums = {};
+  xs.forEach(x => { sums[x.category] = (sums[x.category] || 0) + Number(x.amount); });
+  renderStatus(sums);
+});
 
 /* ---------- Recent Items (2 วันย้อนหลัง) ---------- */
 function renderRecent() {
@@ -359,19 +502,19 @@ function recentItemHtml(x) {
 function renderSettings() {
   if (!DATA || !Array.isArray(DATA.categories)) return;
   document.getElementById('categoryList').innerHTML = DATA.categories.map(c => `
-    <div class="glass rounded-xl p-2.5 flex items-center gap-2.5">
-      <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style="background: ${getCatColor(c.name)}18; color: ${getCatColor(c.name)};">
+    <div class="glass rounded-xl p-2.5 flex items-center gap-2.5" style="display:flex;align-items:center;gap:10px;padding:10px;">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background: ${getCatColor(c.name)}18; color: ${getCatColor(c.name)};">
         <i class="fa-solid ${icon(c.icon)}"></i>
       </div>
-      <div class="flex-1 min-w-0">
-        <h4 class="font-bold text-slate-800 text-[12.5px] truncate">${esc(c.name)}</h4>
-        <p class="text-[9.5px] text-slate-400 mt-0.5">งบ ${money(c.monthlyBudget)}</p>
+      <div class="flex-1 min-w-0" style="flex:1;min-width:0;">
+        <h4 class="font-bold text-slate-800 text-[12.5px] truncate" style="font-weight:800;color:#1e293b;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.name)}</h4>
+        <p class="text-[9.5px] text-slate-400 mt-0.5" style="font-size:9.5px;color:#94a3b8;margin-top:2px;">งบ ${money(c.monthlyBudget)}</p>
       </div>
-      <div class="flex items-center gap-1 flex-shrink-0">
-        <button onclick="openCategory('${esc(c.id)}')" class="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center text-[9.5px] active:scale-90">
+      <div class="flex items-center gap-1 flex-shrink-0" style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <button onclick="openCategory('${esc(c.id)}')" style="width:28px;height:28px;border-radius:8px;background:#f3e8ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:10px;">
           <i class="fa-solid fa-pen"></i>
         </button>
-        <button onclick="removeCategory('${esc(c.id)}')" class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-[9.5px] active:scale-90">
+        <button onclick="removeCategory('${esc(c.id)}')" style="width:28px;height:28px;border-radius:8px;background:#ffe4e6;color:#e11d48;display:flex;align-items:center;justify-content:center;font-size:10px;">
           <i class="fa-solid fa-trash-can"></i>
         </button>
       </div>
@@ -379,16 +522,16 @@ function renderSettings() {
   `).join('');
 
   document.getElementById('paymentList').innerHTML = DATA.paymentTypes.map(p => `
-    <div class="glass rounded-xl p-2.5 flex items-center gap-2.5">
-      <div class="w-9 h-9 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center text-sm flex-shrink-0">
+    <div class="glass rounded-xl p-2.5 flex items-center gap-2.5" style="display:flex;align-items:center;gap:10px;padding:10px;">
+      <div class="w-9 h-9 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center text-sm flex-shrink-0" style="width:36px;height:36px;border-radius:10px;background:#cffafe;color:#0e7490;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
         <i class="fa-solid ${icon(p.icon)}"></i>
       </div>
-      <h4 class="font-bold text-slate-800 text-[12.5px] truncate flex-1">${esc(p.name)}</h4>
-      <div class="flex items-center gap-1 flex-shrink-0">
-        <button onclick="openPayment('${esc(p.id)}')" class="w-7 h-7 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center text-[9.5px] active:scale-90">
+      <h4 class="font-bold text-slate-800 text-[12.5px] truncate flex-1" style="font-weight:800;color:#1e293b;font-size:12.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</h4>
+      <div class="flex items-center gap-1 flex-shrink-0" style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <button onclick="openPayment('${esc(p.id)}')" style="width:28px;height:28px;border-radius:8px;background:#f3e8ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:10px;">
           <i class="fa-solid fa-pen"></i>
         </button>
-        <button onclick="removePayment('${esc(p.id)}')" class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-[9.5px] active:scale-90">
+        <button onclick="removePayment('${esc(p.id)}')" style="width:28px;height:28px;border-radius:8px;background:#ffe4e6;color:#e11d48;display:flex;align-items:center;justify-content:center;font-size:10px;">
           <i class="fa-solid fa-trash-can"></i>
         </button>
       </div>
@@ -436,45 +579,45 @@ function updateCompareStats() {
 function openExpense(id) {
   editing = DATA.expenses.find(x => x.id === id) || null;
   document.getElementById('modalBody').innerHTML = `
-    <h2 class="text-base font-black text-slate-800 mb-4 flex items-center gap-2">
-      <span class="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center text-xs">
+    <h2 style="font-size:16px;font-weight:900;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <span style="width:32px;height:32px;border-radius:10px;background:#fce7f3;color:#db2777;display:flex;align-items:center;justify-content:center;font-size:12px;">
         <i class="fa-solid ${editing ? 'fa-pen-to-square' : 'fa-plus'}"></i>
       </span>
       ${editing ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่'}
     </h2>
-    <div class="space-y-3">
-      <div class="grid grid-cols-2 gap-2">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div>
-          <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">วันที่</label>
-          <input id="fDate" type="date" value="${editing ? editing.date : new Date().toISOString().slice(0, 10)}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px]">
+          <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">วันที่</label>
+          <input id="fDate" type="date" value="${editing ? editing.date : new Date().toISOString().slice(0, 10)}" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
         </div>
         <div>
-          <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">จำนวนเงิน (บาท)</label>
-          <input id="fAmount" type="number" min="0" step="0.01" value="${editing ? editing.amount : ''}" placeholder="0.00" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px] font-bold">
+          <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">จำนวนเงิน (บาท)</label>
+          <input id="fAmount" type="number" min="0" step="0.01" value="${editing ? editing.amount : ''}" placeholder="0.00" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;">
         </div>
       </div>
       <div>
-        <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">หมวดหมู่</label>
-        <select id="fCat" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px]">
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">หมวดหมู่</label>
+        <select id="fCat" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
           ${DATA.categories.filter(x => x.isActive).map(x => `<option ${editing && editing.category === x.name ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}
         </select>
       </div>
       <div>
-        <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">วิธีชำระเงิน</label>
-        <select id="fPay" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px]">
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">วิธีชำระเงิน</label>
+        <select id="fPay" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
           ${DATA.paymentTypes.filter(x => x.isActive).map(x => `<option ${editing && editing.paymentType === x.name ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}
         </select>
       </div>
       <div>
-        <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">รายละเอียด</label>
-        <input id="fDesc" value="${editing ? esc(editing.description) : ''}" placeholder="เช่น ข้าวกะเพรา, ชานมไข่มุก" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px]">
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">รายละเอียด</label>
+        <input id="fDesc" value="${editing ? esc(editing.description) : ''}" placeholder="เช่น ข้าวกะเพรา, ชานมไข่มุก" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
       </div>
       <div>
-        <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">หมายเหตุ</label>
-        <textarea id="fNote" rows="2" placeholder="ระบุเพิ่มเติม (ไม่บังคับ)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px]">${editing ? esc(editing.note || '') : ''}</textarea>
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">หมายเหตุ</label>
+        <textarea id="fNote" rows="2" placeholder="ระบุเพิ่มเติม (ไม่บังคับ)" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">${editing ? esc(editing.note || '') : ''}</textarea>
       </div>
-      <button onclick="saveExpense()" class="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold py-3 rounded-2xl shadow-lg shadow-pink-500/30 active:scale-95 transition-all mt-1.5 text-[13px]">
-        <i class="fa-solid fa-check mr-1.5"></i> บันทึกรายการ
+      <button onclick="saveExpense()" style="width:100%;background:linear-gradient(135deg,#ec4899,#a855f7);color:white;font-weight:700;padding:12px;border-radius:16px;box-shadow:0 8px 20px -6px rgba(236,72,153,0.4);font-size:13px;cursor:pointer;margin-top:4px;">
+        <i class="fa-solid fa-check" style="margin-right:6px;"></i> บันทึกรายการ
       </button>
     </div>
   `;
@@ -497,24 +640,28 @@ function removeExpense(id) {
 function openCategory(id) {
   editing = DATA.categories.find(x => x.id === id) || null;
   document.getElementById('modalBody').innerHTML = `
-    <h2 class="text-base font-black text-slate-800 mb-4 flex items-center gap-2">
-      <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-xs"><i class="fa-solid fa-layer-group"></i></span>
+    <h2 style="font-size:16px;font-weight:900;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <span style="width:32px;height:32px;border-radius:10px;background:#f3e8ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:12px;">
+        <i class="fa-solid fa-layer-group"></i>
+      </span>
       ${editing ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่ใหม่'}
     </h2>
-    <div class="space-y-3">
+    <div style="display:flex;flex-direction:column;gap:12px;">
       <div>
-        <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">ชื่อหมวดหมู่</label>
-        <input id="cName" value="${editing ? esc(editing.name) : ''}" placeholder="เช่น ช้อปปิ้ง, ค่ารักษา" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px]">
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">ชื่อหมวดหมู่</label>
+        <input id="cName" value="${editing ? esc(editing.name) : ''}" placeholder="เช่น ช้อปปิ้ง, ค่ารักษา" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
       </div>
       <div>
-        <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">งบประมาณต่อเดือน (บาท)</label>
-        <input id="cBudget" type="number" value="${editing ? editing.monthlyBudget : 0}" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px] font-bold">
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">งบประมาณต่อเดือน (บาท)</label>
+        <input id="cBudget" type="number" value="${editing ? editing.monthlyBudget : 0}" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;">
       </div>
       <div>
-        <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">ไอคอน Font Awesome</label>
-        <input id="cIcon" value="${editing ? esc(editing.icon) : 'fa-shapes'}" placeholder="fa-utensils, fa-tag" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px]">
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">ไอคอน Font Awesome</label>
+        <input id="cIcon" value="${editing ? esc(editing.icon) : 'fa-shapes'}" placeholder="fa-utensils, fa-tag" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
       </div>
-      <button onclick="saveCategory()" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 rounded-2xl shadow-lg shadow-purple-500/30 active:scale-95 transition-all mt-1.5 text-[13px]">บันทึกหมวดหมู่</button>
+      <button onclick="saveCategory()" style="width:100%;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;font-weight:700;padding:12px;border-radius:16px;box-shadow:0 8px 20px -6px rgba(124,58,237,0.4);font-size:13px;cursor:pointer;margin-top:4px;">
+        บันทึกหมวดหมู่
+      </button>
     </div>
   `;
   document.getElementById('modal').classList.add('show');
@@ -534,20 +681,24 @@ function removeCategory(id) {
 function openPayment(id) {
   editing = DATA.paymentTypes.find(x => x.id === id) || null;
   document.getElementById('modalBody').innerHTML = `
-    <h2 class="text-base font-black text-slate-800 mb-4 flex items-center gap-2">
-      <span class="w-8 h-8 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center text-xs"><i class="fa-solid fa-credit-card"></i></span>
+    <h2 style="font-size:16px;font-weight:900;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <span style="width:32px;height:32px;border-radius:10px;background:#cffafe;color:#0e7490;display:flex;align-items:center;justify-content:center;font-size:12px;">
+        <i class="fa-solid fa-credit-card"></i>
+      </span>
       ${editing ? 'แก้ไขวิธีชำระ' : 'เพิ่มวิธีชำระใหม่'}
     </h2>
-    <div class="space-y-3">
+    <div style="display:flex;flex-direction:column;gap:12px;">
       <div>
-        <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">ชื่อวิธีชำระเงิน</label>
-        <input id="pName" value="${editing ? esc(editing.name) : ''}" placeholder="เช่น พร้อมเพย์, เงินสด" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px]">
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">ชื่อวิธีชำระเงิน</label>
+        <input id="pName" value="${editing ? esc(editing.name) : ''}" placeholder="เช่น พร้อมเพย์, เงินสด" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
       </div>
       <div>
-        <label class="block text-[9.5px] font-semibold text-slate-600 mb-1">ไอคอน Font Awesome</label>
-        <input id="pIcon" value="${editing ? esc(editing.icon) : 'fa-wallet'}" placeholder="fa-wallet, fa-qrcode" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[13px]">
+        <label style="display:block;font-size:9.5px;font-weight:600;color:#475569;margin-bottom:4px;">ไอคอน Font Awesome</label>
+        <input id="pIcon" value="${editing ? esc(editing.icon) : 'fa-wallet'}" placeholder="fa-wallet, fa-qrcode" style="width:100%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:8px 12px;font-size:13px;">
       </div>
-      <button onclick="savePayment()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold py-3 rounded-2xl shadow-lg shadow-cyan-500/30 active:scale-95 transition-all mt-1.5 text-[13px]">บันทึกวิธีชำระเงิน</button>
+      <button onclick="savePayment()" style="width:100%;background:linear-gradient(135deg,#06b6d4,#2563eb);color:white;font-weight:700;padding:12px;border-radius:16px;box-shadow:0 8px 20px -6px rgba(6,182,212,0.4);font-size:13px;cursor:pointer;margin-top:4px;">
+        บันทึกวิธีชำระเงิน
+      </button>
     </div>
   `;
   document.getElementById('modal').classList.add('show');
