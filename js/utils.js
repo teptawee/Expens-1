@@ -2,7 +2,6 @@
    PASTEL WALLET — Utility Functions
    ===================================================================== */
 
-/* ---------- Formatting ---------- */
 const money = n => '฿' + Number(n || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
@@ -18,7 +17,6 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({
 
 const icon = n => n || 'fa-shapes';
 
-/* ---------- Colors ---------- */
 function getCatColor(catName) {
   let found = DATA.categories.find(c => c.name === catName);
   if (found && found.color) return found.color;
@@ -30,7 +28,6 @@ function getCatColor(catName) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-/* ---------- Date helpers ---------- */
 const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
 const TH_DAYS = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
@@ -47,7 +44,6 @@ function isoDate(d) {
   return `${y}-${m}-${dd}`;
 }
 
-/* ---------- Sum / Compare ---------- */
 function sumInDates(fromIso, toIso) {
   return DATA.expenses
     .filter(x => x.date >= fromIso && x.date <= toIso)
