@@ -1,6 +1,5 @@
 /* =====================================================================
    PASTEL WALLET — Main Application Logic
-   แก้ไข: เพิ่ม guard ใน filtered() และ render()
    ===================================================================== */
 
 /* ---------- State ---------- */
@@ -12,7 +11,6 @@ let activeFilter = '7d';
 async function call(fn, arg, done) {
   try {
     if (CONFIG.USE_LOCAL_STORAGE) {
-      // ===== โหมด localStorage =====
       if (fn === 'saveExpense') {
         if (arg.id) {
           let idx = DATA.expenses.findIndex(x => x.id === arg.id);
@@ -43,7 +41,6 @@ async function call(fn, arg, done) {
       }
       persistData();
     } else {
-      // ===== โหมด API =====
       await callAPI(fn, arg);
       DATA = await loadDataFromAPI();
     }
@@ -80,7 +77,6 @@ function inRange(date) {
   return true;
 }
 
-// ⚠️ FIX: เพิ่ม guard ป้องกัน DATA = null
 function filtered() {
   if (!DATA || !Array.isArray(DATA.expenses)) return [];
   return DATA.expenses.filter(x => inRange(x.date));
@@ -101,7 +97,6 @@ function applyFilter() { render(); toast('กรองข้อมูลแล�
 
 /* ---------- Main Render ---------- */
 function render() {
-  // ⚠️ FIX: guard — ถ้า DATA ยังไม่พร้อม ให้ข้าม
   if (!DATA || !Array.isArray(DATA.expenses)) {
     console.warn('⏳ render() ถูกเรียกก่อนที่ DATA จะพร้อม — ข้ามไป');
     return;
@@ -134,12 +129,7 @@ function render() {
   renderBudgets(sums);
   document.getElementById('topCat').textContent = top ? esc(top[0]) : '-';
 
-  let recentSource = xs.length > 0 ? xs : DATA.expenses;
-  document.getElementById('recent').innerHTML = recentSource.slice()
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 5).map(expItemHtml).join('')
-    || '<div class="text-center py-6 text-slate-400 text-xs glass-soft rounded-xl border border-dashed border-purple-200">ยังไม่มีรายการ</div>';
-
+  renderRecent();
   renderExpenseList();
   renderSettings();
   if (document.getElementById('home').classList.contains('active')) drawCharts(xs, sums, pays);
@@ -217,32 +207,151 @@ function expItemHtml(x) {
   `;
 }
 
-/* ---------- Budgets ---------- */
+/* ---------- Budgets v2 ---------- */
 function renderBudgets(sums) {
   if (!DATA || !Array.isArray(DATA.categories)) return;
   let cats = DATA.categories.filter(c => c.isActive);
+
   document.getElementById('budgetList').innerHTML = cats.map(c => {
-    let used = Number(sums[c.name] || 0), budget = Number(c.monthlyBudget || 0);
+    let used = Number(sums[c.name] || 0);
+    let budget = Number(c.monthlyBudget || 0);
     let pct = budget ? Math.min(100, (used / budget) * 100) : 0;
     let isOver = budget > 0 && used > budget;
+    let pctText = budget ? Math.round((used / budget) * 100) : 0;
     let col = getCatColor(c.name);
+
     return `
-      <div class="budget-row">
-        <div class="flex items-center justify-between text-[10.5px] mb-1.5">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-2 h-2 rounded-full flex-shrink-0" style="background: ${col}"></span>
-            <span class="font-bold text-slate-800 truncate">${esc(c.name)}</span>
+      <div class="budget-row ${isOver ? 'is-over' : ''}">
+        <div class="br-head">
+          <div class="br-icon" style="background: linear-gradient(135deg, ${col}, ${col}cc);">
+            <i class="fa-solid ${icon(c.icon)}"></i>
           </div>
-          <div class="num text-slate-500 whitespace-nowrap ml-2">
-            <span class="font-bold ${isOver ? 'text-rose-600' : 'text-slate-700'}">${money(used)}</span> / ${money(budget)}
+          <div class="br-info">
+            <div class="br-name">${esc(c.name)}</div>
+            <div class="br-pct ${isOver ? 'over' : ''}">
+              ${isOver
+                ? `<i class="fa-solid fa-triangle-exclamation"></i> เกินงบ ${pctText - 100}%`
+                : `ใช้ไป ${pctText}% ของงบ`}
+            </div>
           </div>
         </div>
+        <div class="br-amounts">
+          <span class="br-used ${isOver ? 'over' : ''}">${money(used)}</span>
+          <span class="br-budget">/ ${money(budget)}</span>
+        </div>
         <div class="progress-track">
-          <div class="progress-fill" style="width: ${pct}%; background: ${isOver ? 'linear-gradient(90deg, #f43f5e, #e11d48)' : 'linear-gradient(90deg, #ff758c, #8b5cf6)'};"></div>
+          <div class="progress-fill" style="width: ${pct}%; background: ${
+            isOver
+              ? 'linear-gradient(90deg, #f43f5e, #e11d48)'
+              : `linear-gradient(90deg, ${col}, #a855f7)`
+          };"></div>
         </div>
       </div>
     `;
-  }).join('') || '<div class="text-center py-6 text-slate-400 text-xs">ยังไม่มีข้อมูลงบประมาณ</div>';
+  }).join('') || `
+    <div class="recent-empty md:col-span-2">
+      <i class="fa-solid fa-bullseye"></i>
+      ยังไม่มีข้อมูลงบประมาณ
+    </div>
+  `;
+}
+
+/* ---------- Recent Items (2 วันย้อนหลัง) ---------- */
+function renderRecent() {
+  if (!DATA || !Array.isArray(DATA.expenses)) return;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const todayIso = isoDate(today);
+  const yesterdayIso = isoDate(yesterday);
+
+  const items = DATA.expenses.filter(x =>
+    x.date === todayIso || x.date === yesterdayIso
+  );
+
+  const el = document.getElementById('recent');
+  if (!el) return;
+
+  if (items.length === 0) {
+    el.innerHTML = `
+      <div class="recent-empty">
+        <i class="fa-solid fa-mug-hot"></i>
+        ยังไม่มีรายการใน 2 วันที่ผ่านมา
+      </div>
+    `;
+    return;
+  }
+
+  const groups = { [todayIso]: [], [yesterdayIso]: [] };
+  items.forEach(x => { if (groups[x.date]) groups[x.date].push(x); });
+
+  const dayLabel = (iso) => {
+    if (iso === todayIso) return 'วันนี้';
+    if (iso === yesterdayIso) return 'เมื่อวาน';
+    return thaiDateLong(iso);
+  };
+
+  const dateShort = (iso) => {
+    const d = new Date(iso + 'T00:00:00');
+    return `${d.getDate()} ${TH_MONTHS[d.getMonth()]}`;
+  };
+
+  let html = '';
+
+  if (groups[todayIso].length > 0) {
+    const sum = groups[todayIso].reduce((a, x) => a + Number(x.amount), 0);
+    html += `
+      <div class="recent-day">
+        <div class="rd-label"><span class="rd-dot"></span>${dayLabel(todayIso)} · ${dateShort(todayIso)}</div>
+        <div class="rd-total">${money(sum)}</div>
+      </div>
+      ${groups[todayIso]
+        .sort((a, b) => Number(b.amount) - Number(a.amount))
+        .map(recentItemHtml).join('')}
+    `;
+  }
+
+  if (groups[yesterdayIso].length > 0) {
+    const sum = groups[yesterdayIso].reduce((a, x) => a + Number(x.amount), 0);
+    html += `
+      <div class="recent-day">
+        <div class="rd-label"><span class="rd-dot" style="background: linear-gradient(135deg, #c4b5fd, #a78bfa);"></span>${dayLabel(yesterdayIso)} · ${dateShort(yesterdayIso)}</div>
+        <div class="rd-total">${money(sum)}</div>
+      </div>
+      ${groups[yesterdayIso]
+        .sort((a, b) => Number(b.amount) - Number(a.amount))
+        .map(recentItemHtml).join('')}
+    `;
+  }
+
+  el.innerHTML = html;
+}
+
+function recentItemHtml(x) {
+  let c = DATA.categories.find(c => c.name === x.category);
+  let catColor = getCatColor(x.category);
+  let pt = DATA.paymentTypes.find(p => p.name === x.paymentType);
+  let payIcon = (pt && pt.icon) || 'fa-money-bill-wave';
+
+  return `
+    <div class="recent-item">
+      <div class="ri-icon" style="background: linear-gradient(135deg, ${catColor}, ${catColor}cc);">
+        <i class="fa-solid ${icon(c && c.icon)}"></i>
+      </div>
+      <div class="ri-body">
+        <div class="ri-title">${esc(x.description || x.category)}</div>
+        <div class="ri-meta">
+          <span class="ri-pay"><i class="fa-solid ${payIcon}"></i> ${esc(x.paymentType || 'เงินสด')}</span>
+          <span>·</span>
+          <span>${esc(x.category)}</span>
+        </div>
+      </div>
+      <div class="ri-amount">${money(x.amount)}</div>
+    </div>
+  `;
 }
 
 /* ---------- Settings ---------- */
