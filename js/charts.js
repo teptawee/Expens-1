@@ -9,7 +9,6 @@ if (typeof google !== 'undefined' && google.charts) {
   google.charts.setOnLoadCallback(() => {
     googleChartsLoaded = true;
     console.log('✅ Google Charts โหลดเสร็จ');
-    // ถ้า DATA พร้อมแล้ว ให้ render ใหม่เพื่อวาด charts
     if (typeof APP_READY !== 'undefined' && APP_READY
         && typeof render === 'function' && typeof DATA !== 'undefined' && DATA) {
       render();
