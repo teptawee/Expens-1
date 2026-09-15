@@ -97,7 +97,7 @@ function expensesFiltered() {
 function applyFilter() { render(); toast('กรองข้อมูลแล้ว'); }
 
 /* ============================================================
-   Main Render — ตัด renderBudgets ออก
+   Main Render
    ============================================================ */
 function render() {
   if (!DATA || !Array.isArray(DATA.expenses)) {
@@ -142,8 +142,6 @@ function render() {
     document.getElementById('topCat').textContent = top ? esc(top[0]) : '-';
   });
 
-  // ---- เรียกฟังก์ชันย่อยทั้งหมดแบบปลอดภัย ----
-  // ❌ ตัด renderBudgets ออกแล้ว — ใช้ renderStatus แทน
   safeRender('renderStatus',      () => renderStatus(sums));
   safeRender('renderRecent',      () => renderRecent());
   safeRender('renderExpenseList', () => renderExpenseList());
@@ -242,7 +240,6 @@ function expItemHtml(x) {
 
 /* ============================================================
    Status Wallet — แสดงข้อมูลรายหมวดทั้งหมด
-   (ทำหน้าที่แทน "งบประมาณรายหมวด")
    ============================================================ */
 function renderStatus(sums) {
   if (!DATA || !Array.isArray(DATA.categories)) return;
@@ -251,7 +248,6 @@ function renderStatus(sums) {
   const el = document.getElementById('statusGrid');
   if (!el) return;
 
-  // ---- Summary ด้านบน ----
   const now = new Date();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   const daysLeft = Math.max(0, Math.ceil((monthEnd - now) / (1000 * 60 * 60 * 24)) + 1);
@@ -277,7 +273,6 @@ function renderStatus(sums) {
   if (totalEl)      totalEl.textContent       = fmtNum(totalBudget);
   if (pctEl)        pctEl.textContent         = `(${totalPct.toFixed(1)}%)`;
 
-  // ---- คำนวณแต่ละการ์ด ----
   let cards = cats.map(c => {
     const used   = Number(sums[c.name] || 0);
     const budget = Number(c.monthlyBudget);
@@ -299,19 +294,16 @@ function renderStatus(sums) {
     };
   });
 
-  // ---- Filter ตาม tab ----
   let filteredCards = cards;
   if (statusTab === 'warning')      filteredCards = cards.filter(c => c.state === 'warning');
   else if (statusTab === 'over')    filteredCards = cards.filter(c => c.state === 'over');
 
-  // ---- เรียง: เกินงบ > ใกล้เต็ม > ปกติ ----
   const order = { over: 0, warning: 1, safe: 2 };
   filteredCards.sort((a, b) => {
     if (order[a.state] !== order[b.state]) return order[a.state] - order[b.state];
     return b.pctUsed - a.pctUsed;
   });
 
-  // ---- Render ----
   if (filteredCards.length === 0) {
     const msg = statusTab === 'warning'
       ? 'ไม่มีหมวดที่ใกล้เต็ม'
@@ -495,10 +487,10 @@ function renderSettings() {
           <i class="fa-solid ${icon(c.icon)}"></i>
         </div>
         <div class="flex-1 min-w-0" style="flex:1;min-width:0;">
-          <h4 class="font-bold text-slate-800 text-[12.5px] truncate" style="font-weight:800;color:#1e293b;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.name)}</h4>
-          <p class="text-[9.5px] text-slate-400 mt-0.5" style="font-size:9.5px;color:#94a3b8;margin-top:2px;">งบ ${money(c.monthlyBudget)}</p>
+          <h4 style="font-weight:800;color:#1e293b;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.name)}</h4>
+          <p style="font-size:9.5px;color:#94a3b8;margin-top:2px;">งบ ${money(c.monthlyBudget)}</p>
         </div>
-        <div class="flex items-center gap-1 flex-shrink-0" style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
           <button onclick="openCategory('${esc(c.id)}')" style="width:28px;height:28px;border-radius:8px;background:#f3e8ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:10px;">
             <i class="fa-solid fa-pen"></i>
           </button>
@@ -514,11 +506,11 @@ function renderSettings() {
   if (payEl) {
     payEl.innerHTML = DATA.paymentTypes.map(p => `
       <div class="glass rounded-xl p-2.5 flex items-center gap-2.5" style="display:flex;align-items:center;gap:10px;padding:10px;">
-        <div class="w-9 h-9 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center text-sm flex-shrink-0" style="width:36px;height:36px;border-radius:10px;background:#cffafe;color:#0e7490;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#cffafe;color:#0e7490;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
           <i class="fa-solid ${icon(p.icon)}"></i>
         </div>
-        <h4 class="font-bold text-slate-800 text-[12.5px] truncate flex-1" style="font-weight:800;color:#1e293b;font-size:12.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</h4>
-        <div class="flex items-center gap-1 flex-shrink-0" style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+        <h4 style="font-weight:800;color:#1e293b;font-size:12.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</h4>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
           <button onclick="openPayment('${esc(p.id)}')" style="width:28px;height:28px;border-radius:8px;background:#f3e8ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:10px;">
             <i class="fa-solid fa-pen"></i>
           </button>
