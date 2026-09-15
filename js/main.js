@@ -1,13 +1,9 @@
 /* =====================================================================
    PASTEL WALLET — Entry Point
-   แก้ไข: เพิ่ม APP_READY flag + log เพื่อ debug
    ===================================================================== */
 
 let APP_READY = false;
 
-/**
- * เริ่มต้นแอปพลิเคชัน
- */
 async function init() {
   try {
     if (CONFIG.USE_LOCAL_STORAGE) {
@@ -24,7 +20,7 @@ async function init() {
   } catch (e) {
     console.error('❌ โหลดล้มเหลว:', e);
     toast('โหลดข้อมูลไม่สำเร็จ: ' + e.message);
-    DATA = loadData(); // fallback
+    DATA = loadData();
     console.log('⚠️ ใช้ข้อมูล fallback:', DATA);
     APP_READY = true;
     render();
