@@ -8,10 +8,11 @@ if (typeof google !== 'undefined' && google.charts) {
   google.charts.load('current', { packages: ['corechart'] });
   google.charts.setOnLoadCallback(() => {
     googleChartsLoaded = true;
-    if (typeof render === 'function' && typeof DATA !== 'undefined' && DATA) {
+    console.log('✅ Google Charts โหลดเสร็จ');
+    // ถ้า DATA พร้อมแล้ว ให้ render ใหม่เพื่อวาด charts
+    if (typeof APP_READY !== 'undefined' && APP_READY
+        && typeof render === 'function' && typeof DATA !== 'undefined' && DATA) {
       render();
-    } else {
-      console.log('⏳ Google Charts โหลดเสร็จ แต่ DATA ยังไม่พร้อม — รอ init()');
     }
   });
 }
