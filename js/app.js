@@ -6,6 +6,7 @@
 let range = 'today';
 let editing = null;
 let activeFilter = '7d';
+let statusTab = 'all';   // all | warning | over
 
 /* ---------- CRUD Dispatcher ---------- */
 async function call(fn, arg, done) {
