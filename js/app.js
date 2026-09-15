@@ -142,7 +142,8 @@ function render() {
     document.getElementById('topCat').textContent = top ? esc(top[0]) : '-';
   });
 
-  safeRender('renderStatus',      () => renderStatus(sums));
+  // ⭐ renderStatus คำนวณเดือนนี้เอง — ไม่รับ sums
+  safeRender('renderStatus',      () => renderStatus());
   safeRender('renderRecent',      () => renderRecent());
   safeRender('renderExpenseList', () => renderExpenseList());
   safeRender('renderSettings',    () => renderSettings());
@@ -239,21 +240,37 @@ function expItemHtml(x) {
 }
 
 /* ============================================================
-   Status Wallet — แสดงข้อมูลรายหมวดทั้งหมด
+   Status Wallet — คำนวณจาก "เดือนปัจจุบัน" เสมอ
+   ไม่ขึ้นกับ filter ด้านบน
    ============================================================ */
-function renderStatus(sums) {
+function renderStatus() {
   if (!DATA || !Array.isArray(DATA.categories)) return;
 
   const cats = DATA.categories.filter(c => c.isActive && Number(c.monthlyBudget) > 0);
   const el = document.getElementById('statusGrid');
   if (!el) return;
 
+  // ---- 1. หาช่วงเดือนปัจจุบัน ----
   const now = new Date();
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const monthStartIso = isoDate(monthStart);
+  const monthEndIso   = isoDate(monthEnd);
+
+  // ---- 2. คำนวณยอดใช้จ่าย "เดือนนี้" เท่านั้น ----
+  let monthSums = {};
+  DATA.expenses.forEach(x => {
+    if (x.date >= monthStartIso && x.date <= monthEndIso) {
+      monthSums[x.category] = (monthSums[x.category] || 0) + Number(x.amount);
+    }
+  });
+
+  // ---- 3. จำนวนวันที่เหลือในเดือน ----
   const daysLeft = Math.max(0, Math.ceil((monthEnd - now) / (1000 * 60 * 60 * 24)) + 1);
 
+  // ---- 4. Summary รวม ----
   const totalBudget = cats.reduce((a, c) => a + Number(c.monthlyBudget), 0);
-  const totalUsed   = cats.reduce((a, c) => a + Number(sums[c.name] || 0), 0);
+  const totalUsed   = cats.reduce((a, c) => a + Number(monthSums[c.name] || 0), 0);
   const totalPct    = totalBudget ? (totalUsed / totalBudget) * 100 : 0;
 
   let statusText = 'อยู่ในเกณฑ์ดี';
@@ -273,8 +290,9 @@ function renderStatus(sums) {
   if (totalEl)      totalEl.textContent       = fmtNum(totalBudget);
   if (pctEl)        pctEl.textContent         = `(${totalPct.toFixed(1)}%)`;
 
+  // ---- 5. การ์ดรายหมวด ----
   let cards = cats.map(c => {
-    const used   = Number(sums[c.name] || 0);
+    const used   = Number(monthSums[c.name] || 0);
     const budget = Number(c.monthlyBudget);
     const remain = Math.max(0, budget - used);
     const pctUsed   = budget ? (used / budget) * 100 : 0;
@@ -294,6 +312,7 @@ function renderStatus(sums) {
     };
   });
 
+  // ---- 6. Filter tabs ----
   let filteredCards = cards;
   if (statusTab === 'warning')      filteredCards = cards.filter(c => c.state === 'warning');
   else if (statusTab === 'over')    filteredCards = cards.filter(c => c.state === 'over');
@@ -304,6 +323,7 @@ function renderStatus(sums) {
     return b.pctUsed - a.pctUsed;
   });
 
+  // ---- 7. Render ----
   if (filteredCards.length === 0) {
     const msg = statusTab === 'warning'
       ? 'ไม่มีหมวดที่ใกล้เต็ม'
@@ -371,10 +391,7 @@ document.addEventListener('click', function (e) {
   document.querySelectorAll('.status-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   statusTab = btn.dataset.tab || 'all';
-  const xs = filtered();
-  let sums = {};
-  xs.forEach(x => { sums[x.category] = (sums[x.category] || 0) + Number(x.amount); });
-  renderStatus(sums);
+  renderStatus();
 });
 
 /* ---------- Recent Items ---------- */
