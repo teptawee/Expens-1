@@ -246,7 +246,55 @@
       </div>
       <div id="budgetList" class="budget-list-grid"></div>
     </div>
-
+    
+<!-- ===== สถานะวงเงินคงเหลือ ===== -->
+    <div class="glass" style="margin-top: 12px;">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-icon" style="background:linear-gradient(135deg,#fed7aa,#fdba74);color:#c2410c;">
+            <i class="fa-solid fa-piggy-bank"></i>
+          </span>
+          <div>
+            <div class="section-title">สถานะวงเงินคงเหลือ</div>
+            <div class="section-subtitle">ติดตามการใช้จ่ายเทียบกับงบที่ตั้งไว้</div>
+          </div>
+        </div>
+      </div>
+    
+      <!-- Summary bar -->
+      <div class="status-summary">
+        <div class="status-summary-left">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span class="sparkle">✨</span>
+          <span id="statusStatusText">อยู่ในเกณฑ์ดี</span>
+          <span class="sep">·</span>
+          <span id="statusDaysLeft">เหลืออีก 15 วัน</span>
+        </div>
+        <div class="status-summary-right">
+          <span class="used num" id="statusUsed">฿0</span>
+          <span class="sep">/</span>
+          <span class="total num" id="statusTotal">฿0</span>
+          <span class="percent" id="statusPercent">(0%)</span>
+        </div>
+      </div>
+    
+      <!-- Filter tabs -->
+      <div class="status-tabs">
+        <button class="status-tab active" data-tab="all">
+          <i class="fa-solid fa-list"></i> ทั้งหมด
+        </button>
+        <button class="status-tab" data-tab="warning">
+          <i class="fa-solid fa-triangle-exclamation"></i> ใกล้เต็ม
+        </button>
+        <button class="status-tab" data-tab="over">
+          <i class="fa-solid fa-fire"></i> เกินงบ
+        </button>
+      </div>
+    
+      <!-- Grid การ์ด -->
+      <div class="status-grid" id="statusGrid"></div>
+    </div>
+    
     <!-- Recent Section -->
     <div class="glass" style="margin-top: 12px;">
       <div class="section-header">
