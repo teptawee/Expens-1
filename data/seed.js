@@ -1,7 +1,3 @@
-/* =====================================================================
-   PASTEL WALLET — Seed Data (ข้อมูลตัวอย่างเริ่มต้น)
-   ===================================================================== */
-
 const SEED_CATEGORIES = [
   {"id":"CAT-01","name":"ค่าอาหาร","monthlyBudget":4000.0,"icon":"fa-utensils","isActive":true},
   {"id":"CAT-02","name":"ค่าพาหนะ","monthlyBudget":300.0,"icon":"fa-bus","isActive":true},
@@ -24,5 +20,4 @@ const SEED_PAYMENTS = [
   {"id":"PAY-4","name":"บัตรเครดิต","icon":"fa-credit-card","isActive":true}
 ];
 
-const SEED_EXPENSES = [
-  ];
+const SEED_EXPENSES = [];
