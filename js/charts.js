@@ -1,6 +1,5 @@
 /* =====================================================================
    PASTEL WALLET — Charts (Google Charts + SVG Fallback)
-   แก้ไข: เพิ่ม guard && DATA ใน setOnLoadCallback
    ===================================================================== */
 
 let googleChartsLoaded = false;
@@ -9,7 +8,6 @@ if (typeof google !== 'undefined' && google.charts) {
   google.charts.load('current', { packages: ['corechart'] });
   google.charts.setOnLoadCallback(() => {
     googleChartsLoaded = true;
-    // ⚠️ FIX: รอให้ DATA พร้อมก่อน render
     if (typeof render === 'function' && typeof DATA !== 'undefined' && DATA) {
       render();
     } else {
