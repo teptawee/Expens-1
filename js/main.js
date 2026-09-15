@@ -29,7 +29,6 @@ async function init() {
     console.error('❌ โหลดล้มเหลว:', e);
     toast('โหลดข้อมูลไม่สำเร็จ: ' + e.message);
 
-    // fallback ไปใช้ข้อมูลเริ่มต้น
     DATA = loadData();
     APP_READY = true;
     render();
