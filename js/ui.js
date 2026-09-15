@@ -2,7 +2,6 @@
    PASTEL WALLET — UI Components (Toast, Modal, Popup)
    ===================================================================== */
 
-/* ---------- Toast ---------- */
 function toast(s) {
   let t = document.getElementById('toast');
   t.textContent = s;
@@ -10,13 +9,11 @@ function toast(s) {
   setTimeout(() => t.classList.remove('show'), CONFIG.TOAST_DURATION);
 }
 
-/* ---------- Modal ---------- */
 function closeModal() {
   document.getElementById('modal').classList.remove('show');
   editing = null;
 }
 
-/* ---------- Success Popup ---------- */
 function successPopup(message) {
   document.getElementById('modalBody').innerHTML = `
     <div class="text-center py-5">
