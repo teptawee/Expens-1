@@ -27,37 +27,35 @@
 <div class="app-shell">
 
   <!-- ===== Mobile Header ===== -->
-  <header class="app-header-mobile glass" style="border-radius: 16px; padding: 8px 12px; margin-bottom: 12px; position: sticky; top: 8px; z-index: 30;">
-    <div class="header-brand" onclick="showPage('home')" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-      <div class="brand-icon" style="width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, #f43f5e, #d946ef, #fbbf24); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; box-shadow: 0 3px 10px -2px rgba(236, 72, 153, 0.4);">
+  <header class="app-header-mobile glass">
+    <div class="header-brand" onclick="showPage('home')">
+      <div class="brand-icon">
         <i class="fa-solid fa-wallet"></i>
       </div>
-      <div class="brand-text" style="font-size: 13px; font-weight: 800; background: linear-gradient(90deg, #db2777, #7c3aed, #4f46e5); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
-        กระเป๋าเงินพาสเทล
-      </div>
+      <div class="brand-text">กระเป๋าเงินพาสเทล</div>
     </div>
-    <button class="header-add-btn" onclick="openExpense()" style="width: 32px; height: 32px; border-radius: 10px; background: #f3e8ff; color: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: transform 0.15s;">
+    <button class="header-add-btn" onclick="openExpense()">
       <i class="fa-solid fa-plus"></i>
     </button>
   </header>
 
   <!-- ===== Desktop Header ===== -->
   <header class="app-header-desktop glass">
-    <div class="header-brand" onclick="showPage('home')" style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-      <div class="brand-icon" style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #f43f5e, #d946ef, #fbbf24); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; box-shadow: 0 6px 16px -4px rgba(236, 72, 153, 0.4);">
+    <div class="header-brand" onclick="showPage('home')">
+      <div class="brand-icon" style="width: 44px; height: 44px; border-radius: 14px; font-size: 18px;">
         <i class="fa-solid fa-wallet"></i>
       </div>
       <div>
-        <div style="font-size: 17px; font-weight: 800; background: linear-gradient(90deg, #db2777, #7c3aed, #4f46e5); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+        <div class="brand-title-lg">
           กระเป๋าเงินพาสเทล <span style="color: #fbbf24; -webkit-text-fill-color: #fbbf24;">✦</span>
         </div>
-        <div style="font-size: 11px; color: rgba(124, 58, 237, 0.7); font-weight: 500; margin-top: 2px;">
+        <div class="brand-subtitle">
           จัดการรายจ่ายให้เป็นเรื่องง่าย สดใส ทุกวัน 🌸
         </div>
       </div>
     </div>
 
-    <nav class="desktop-nav" style="display: flex; align-items: center; gap: 4px; padding: 4px; background: rgba(243, 232, 255, 0.8); border-radius: 999px; border: 1px solid rgba(233, 213, 255, 0.8);">
+    <nav class="desktop-nav">
       <button class="nav-btn active" data-page="home" onclick="showPage('home')">
         <i class="fa-solid fa-house-chimney"></i> หน้าหลัก
       </button>
@@ -74,10 +72,12 @@
     </button>
   </header>
 
-  <!-- ===== HOME PAGE ===== -->
+  <!-- ======================================================
+       HOME PAGE
+       ====================================================== -->
   <main class="page active" id="home">
 
-    <!-- Hero -->
+    <!-- ---------- Hero ---------- -->
     <div class="hero-aurora">
       <div class="hero-row">
         <div class="hero-pill">
@@ -111,7 +111,7 @@
       </div>
     </div>
 
-    <!-- Filter Pills -->
+    <!-- ---------- Filter Pills ---------- -->
     <div class="filter-pills-bar" style="margin-top: 12px;">
       <button class="filter-pill active" data-range="today"><i class="fa-solid fa-calendar-day"></i> สรุปวันนี้</button>
       <button class="filter-pill" data-range="week"><i class="fa-regular fa-calendar"></i> 7 วันล่าสุด</button>
@@ -120,7 +120,7 @@
       <button class="filter-pill" data-range="all"><i class="fa-solid fa-list"></i> ทั้งหมด</button>
     </div>
 
-    <!-- Stat Compare -->
+    <!-- ---------- Stat Compare ---------- -->
     <div class="stat-grid" style="margin-top: 12px;">
       <div class="glass stat-compare">
         <div class="top-line" style="background: linear-gradient(90deg, #ff8eb8, #ec4899);"></div>
@@ -157,8 +157,8 @@
       </div>
     </div>
 
-    <!-- Charts Mobile -->
-    <div class="charts-mobile-scroll md-hide" style="margin-top: 12px;">
+    <!-- ---------- Charts: Mobile ---------- -->
+    <div class="charts-mobile-scroll" style="margin-top: 12px;">
       <div class="glass">
         <div class="section-header">
           <div class="section-header-left">
@@ -188,8 +188,8 @@
       </div>
     </div>
 
-    <!-- Charts Desktop -->
-    <div class="charts-desktop-grid md-show" style="margin-top: 16px;">
+    <!-- ---------- Charts: Desktop ---------- -->
+    <div class="charts-desktop-grid" style="margin-top: 16px;">
       <div class="glass col-span-5">
         <div class="section-header">
           <div class="section-header-left">
@@ -228,7 +228,59 @@
       </div>
     </div>
 
-    <!-- Budget Section -->
+    <!-- ==================================================
+         สถานะวงเงินคงเหลือ
+         ================================================== -->
+    <div class="glass" style="margin-top: 12px;">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-icon" style="background:linear-gradient(135deg,#fed7aa,#fdba74);color:#c2410c;">
+            <i class="fa-solid fa-piggy-bank"></i>
+          </span>
+          <div>
+            <div class="section-title">สถานะวงเงินคงเหลือ</div>
+            <div class="section-subtitle">ติดตามการใช้จ่ายเทียบกับงบที่ตั้งไว้</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary bar -->
+      <div class="status-summary">
+        <div class="status-summary-left">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span class="sparkle">✨</span>
+          <span id="statusStatusText">อยู่ในเกณฑ์ดี</span>
+          <span class="sep">·</span>
+          <span id="statusDaysLeft">เหลืออีก 15 วัน</span>
+        </div>
+        <div class="status-summary-right">
+          <span class="used num" id="statusUsed">฿0</span>
+          <span class="sep">/</span>
+          <span class="total num" id="statusTotal">฿0</span>
+          <span class="percent" id="statusPercent">(0%)</span>
+        </div>
+      </div>
+
+      <!-- Filter tabs -->
+      <div class="status-tabs">
+        <button class="status-tab active" data-tab="all">
+          <i class="fa-solid fa-list"></i> ทั้งหมด
+        </button>
+        <button class="status-tab" data-tab="warning">
+          <i class="fa-solid fa-triangle-exclamation"></i> ใกล้เต็ม
+        </button>
+        <button class="status-tab" data-tab="over">
+          <i class="fa-solid fa-fire"></i> เกินงบ
+        </button>
+      </div>
+
+      <!-- Grid การ์ดสถานะ -->
+      <div class="status-grid" id="statusGrid"></div>
+    </div>
+
+    <!-- ==================================================
+         งบประมาณรายหมวด
+         ================================================== -->
     <div class="glass" style="margin-top: 12px;">
       <div class="section-header">
         <div class="section-header-left">
@@ -246,56 +298,10 @@
       </div>
       <div id="budgetList" class="budget-list-grid"></div>
     </div>
-    
-<!-- ===== สถานะวงเงินคงเหลือ ===== -->
-    <div class="glass" style="margin-top: 12px;">
-      <div class="section-header">
-        <div class="section-header-left">
-          <span class="section-icon" style="background:linear-gradient(135deg,#fed7aa,#fdba74);color:#c2410c;">
-            <i class="fa-solid fa-piggy-bank"></i>
-          </span>
-          <div>
-            <div class="section-title">สถานะวงเงินคงเหลือ</div>
-            <div class="section-subtitle">ติดตามการใช้จ่ายเทียบกับงบที่ตั้งไว้</div>
-          </div>
-        </div>
-      </div>
-    
-      <!-- Summary bar -->
-      <div class="status-summary">
-        <div class="status-summary-left">
-          <i class="fa-solid fa-chart-pie"></i>
-          <span class="sparkle">✨</span>
-          <span id="statusStatusText">อยู่ในเกณฑ์ดี</span>
-          <span class="sep">·</span>
-          <span id="statusDaysLeft">เหลืออีก 15 วัน</span>
-        </div>
-        <div class="status-summary-right">
-          <span class="used num" id="statusUsed">฿0</span>
-          <span class="sep">/</span>
-          <span class="total num" id="statusTotal">฿0</span>
-          <span class="percent" id="statusPercent">(0%)</span>
-        </div>
-      </div>
-    
-      <!-- Filter tabs -->
-      <div class="status-tabs">
-        <button class="status-tab active" data-tab="all">
-          <i class="fa-solid fa-list"></i> ทั้งหมด
-        </button>
-        <button class="status-tab" data-tab="warning">
-          <i class="fa-solid fa-triangle-exclamation"></i> ใกล้เต็ม
-        </button>
-        <button class="status-tab" data-tab="over">
-          <i class="fa-solid fa-fire"></i> เกินงบ
-        </button>
-      </div>
-    
-      <!-- Grid การ์ด -->
-      <div class="status-grid" id="statusGrid"></div>
-    </div>
-    
-    <!-- Recent Section -->
+
+    <!-- ==================================================
+         รายการล่าสุด (2 วันย้อนหลัง)
+         ================================================== -->
     <div class="glass" style="margin-top: 12px;">
       <div class="section-header">
         <div class="section-header-left">
@@ -316,7 +322,9 @@
 
   </main>
 
-  <!-- ===== EXPENSES PAGE ===== -->
+  <!-- ======================================================
+       EXPENSES PAGE
+       ====================================================== -->
   <main class="page" id="expenses">
     <div class="glass" style="margin-top: 12px;">
       <div class="page-header">
@@ -352,7 +360,9 @@
     </div>
   </main>
 
-  <!-- ===== SETTINGS PAGE ===== -->
+  <!-- ======================================================
+       SETTINGS PAGE
+       ====================================================== -->
   <main class="page" id="settings">
     <div class="glass" style="margin-top: 12px;">
       <div class="page-header">
@@ -360,6 +370,7 @@
         <div class="title">ตั้งค่าระบบ</div>
       </div>
 
+      <!-- หมวดหมู่ -->
       <div style="margin-top: 14px;">
         <div class="settings-section-head">
           <div class="settings-section-title">
@@ -373,6 +384,7 @@
         <div class="settings-list-grid" id="categoryList"></div>
       </div>
 
+      <!-- วิธีชำระ -->
       <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(167, 139, 250, 0.15);">
         <div class="settings-section-head">
           <div class="settings-section-title">
@@ -386,6 +398,7 @@
         <div class="settings-list-grid" id="paymentList"></div>
       </div>
 
+      <!-- จัดการข้อมูล -->
       <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(167, 139, 250, 0.15);">
         <div class="settings-section-head">
           <div class="settings-section-title">
