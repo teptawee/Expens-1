@@ -6,24 +6,34 @@ let APP_READY = false;
 
 async function init() {
   try {
+    console.log('🚀 เริ่ม init()');
+
     if (CONFIG.USE_LOCAL_STORAGE) {
       console.log('📦 โหมด localStorage');
       DATA = loadData();
-      console.log('✅ โหลดข้อมูลจาก localStorage สำเร็จ:', DATA);
     } else {
       console.log('📡 กำลังโหลดจาก API:', CONFIG.API_URL);
       DATA = await loadDataFromAPI();
-      console.log('✅ โหลดข้อมูลจาก API สำเร็จ:', DATA);
+      console.log('✅ โหลดข้อมูลสำเร็จ:', {
+        expenses: DATA.expenses.length,
+        categories: DATA.categories.length,
+        paymentTypes: DATA.paymentTypes.length
+      });
     }
+
     APP_READY = true;
     render();
+    console.log('✅ render() เสร็จสิ้น');
+
   } catch (e) {
     console.error('❌ โหลดล้มเหลว:', e);
     toast('โหลดข้อมูลไม่สำเร็จ: ' + e.message);
+
+    // fallback ไปใช้ข้อมูลเริ่มต้น
     DATA = loadData();
-    console.log('⚠️ ใช้ข้อมูล fallback:', DATA);
     APP_READY = true;
     render();
+    console.log('⚠️ ใช้ข้อมูล fallback');
   }
 }
 
@@ -57,4 +67,9 @@ document.addEventListener('keydown', e => {
   if (toEl) toEl.value = today.toISOString().slice(0, 10);
 })();
 
-init();
+// รอ DOM พร้อมก่อน init
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
