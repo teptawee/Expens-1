@@ -1,13 +1,9 @@
 /* =====================================================================
    PASTEL WALLET — Storage Layer
-   แก้ไข: ใช้ JSONP สำหรับ getData เลี่ยง CORS
    ===================================================================== */
 
 let DATA = null;
 
-/**
- * โหลดข้อมูลจาก localStorage หรือ seed ถ้ายังไม่มี
- */
 function loadData() {
   if (!CONFIG.USE_LOCAL_STORAGE) {
     return { expenses: [], categories: [], paymentTypes: [] };
@@ -32,9 +28,6 @@ function loadData() {
   };
 }
 
-/**
- * บันทึกข้อมูลลง localStorage
- */
 function persistData() {
   if (!CONFIG.USE_LOCAL_STORAGE) return;
   try {
@@ -44,9 +37,6 @@ function persistData() {
   }
 }
 
-/**
- * สร้าง ID แบบสุ่ม
- */
 function nextId(prefix) {
   const rand = Math.random().toString(36).slice(2, 12).toUpperCase();
   return prefix + '-' + rand;
@@ -59,9 +49,11 @@ function loadDataFromAPI() {
   return new Promise((resolve, reject) => {
     const cbName = 'pastelCb_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
     let script = document.createElement('script');
+    let timer = null;
 
     window[cbName] = (json) => {
       try {
+        if (timer) clearTimeout(timer);
         delete window[cbName];
         if (script.parentNode) script.parentNode.removeChild(script);
         if (!json || !json.ok) {
@@ -79,13 +71,13 @@ function loadDataFromAPI() {
 
     script.src = CONFIG.API_URL + '?action=getData&callback=' + cbName;
     script.onerror = () => {
+      if (timer) clearTimeout(timer);
       delete window[cbName];
       if (script.parentNode) script.parentNode.removeChild(script);
       reject(new Error('ไม่สามารถเชื่อมต่อ API'));
     };
 
-    // timeout 15 วินาที
-    setTimeout(() => {
+    timer = setTimeout(() => {
       if (window[cbName]) {
         delete window[cbName];
         if (script.parentNode) script.parentNode.removeChild(script);
@@ -98,7 +90,7 @@ function loadDataFromAPI() {
 }
 
 /**
- * ส่งข้อมูลไป API (no-cors — fire and forget)
+ * ส่งข้อมูลไป API — ใช้ fetch ปกติ + text/plain เลี่ยง preflight
  */
 async function callAPI(action, payload) {
   const res = await fetch(CONFIG.API_URL, {
