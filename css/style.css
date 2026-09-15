@@ -1146,3 +1146,300 @@ input[type="number"] { -moz-appearance: textfield; }
   .md-hide { display: none !important; }
   .md-show { display: block !important; }
 }
+
+/* =====================================================================
+   STATUS WALLET — สถานะวงเงินคงเหลือ
+   ===================================================================== */
+
+/* ---------- Summary bar ด้านบน ---------- */
+.status-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 4px 14px -4px rgba(139, 92, 246, 0.1);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.status-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #4a3d5c;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.status-summary-left i {
+  color: #d97706;
+  font-size: 16px;
+}
+.status-summary-left .sparkle {
+  color: #f59e0b;
+  font-size: 12px;
+}
+.status-summary-left .sep {
+  color: #cbd5e1;
+  margin: 0 2px;
+}
+.status-summary-right {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: 'Plus Jakarta Sans', 'Kanit', sans-serif;
+  white-space: nowrap;
+}
+.status-summary-right .used {
+  font-size: 18px;
+  font-weight: 900;
+  color: #4c1d95;
+  letter-spacing: -0.02em;
+}
+.status-summary-right .sep {
+  font-size: 14px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin: 0 2px;
+}
+.status-summary-right .total {
+  font-size: 14px;
+  font-weight: 700;
+  color: #7c3aed;
+}
+.status-summary-right .percent {
+  font-size: 13px;
+  font-weight: 700;
+  color: #7c3aed;
+  margin-left: 2px;
+}
+@media (min-width: 768px) {
+  .status-summary { padding: 16px 20px; border-radius: 18px; }
+  .status-summary-left { font-size: 13.5px; }
+  .status-summary-right .used { font-size: 22px; }
+  .status-summary-right .total,
+  .status-summary-right .percent { font-size: 15px; }
+}
+
+/* ---------- Filter tabs ---------- */
+.status-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.status-tabs::-webkit-scrollbar { display: none; }
+
+.status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: #ffffff;
+  color: #64748b;
+  border: 1px solid rgba(236, 72, 153, 0.08);
+  box-shadow: 0 2px 6px -2px rgba(139, 92, 246, 0.06);
+}
+.status-tab i { font-size: 11px; }
+.status-tab:active { transform: scale(0.96); }
+
+/* ทั้งหมด — โทนส้มชมพู */
+.status-tab.active[data-tab="all"] {
+  background: linear-gradient(135deg, #fda4af 0%, #fbbf24 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 6px 14px -3px rgba(251, 146, 60, 0.4);
+}
+/* ใกล้เต็ม — โทนส้มอำพัน */
+.status-tab.active[data-tab="warning"] {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 6px 14px -3px rgba(245, 158, 11, 0.45);
+}
+/* เกินงบ — โทนแดงชมพู */
+.status-tab.active[data-tab="over"] {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 6px 14px -3px rgba(244, 63, 94, 0.45);
+}
+
+/* ---------- Grid การ์ดสถานะ ---------- */
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .status-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .status-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; }
+}
+
+/* ---------- การ์ดสถานะ ---------- */
+.status-card {
+  position: relative;
+  padding: 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #fefcff 100%);
+  border: 1.5px solid rgba(236, 72, 153, 0.08);
+  box-shadow: 0 3px 12px -4px rgba(139, 92, 246, 0.1);
+  overflow: hidden;
+  transition: all 0.25s;
+}
+.status-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px -6px rgba(139, 92, 246, 0.18);
+}
+
+/* สีขอบตามสถานะ */
+.status-card[data-state="safe"]    { border-color: rgba(16, 185, 129, 0.25); }
+.status-card[data-state="warning"] { border-color: rgba(245, 158, 11, 0.35); background: linear-gradient(135deg, #fffdf7 0%, #fffbf0 100%); }
+.status-card[data-state="over"]    { border-color: rgba(244, 63, 94, 0.35); background: linear-gradient(135deg, #fff5f6 0%, #fff0f3 100%); }
+
+.status-card .sc-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.status-card .sc-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px -3px rgba(0,0,0,0.15);
+}
+.status-card .sc-title {
+  flex: 1;
+  min-width: 0;
+}
+.status-card .sc-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: #241c30;
+  line-height: 1.2;
+  margin-bottom: 3px;
+  word-break: break-word;
+}
+.status-card .sc-remain-text {
+  font-size: 10.5px;
+  color: #8d8199;
+  font-weight: 600;
+}
+.status-card .sc-percent {
+  font-family: 'Plus Jakarta Sans', 'Kanit', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 10px;
+  line-height: 1;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+/* % ตามสถานะ */
+.status-card[data-state="safe"]    .sc-percent { color: #059669; background: #d1fae5; }
+.status-card[data-state="warning"] .sc-percent { color: #b45309; background: #fef3c7; }
+.status-card[data-state="over"]    .sc-percent { color: #be123c; background: #ffe4e6; }
+
+/* ---------- 3-column เล็ก: ใช้ไป / วงเงิน / คงเหลือ ---------- */
+.status-card .sc-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.status-card .sc-stat {
+  padding: 8px 6px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(236, 72, 153, 0.08);
+  border-radius: 10px;
+  text-align: center;
+  min-width: 0;
+}
+.status-card .sc-stat-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+.status-card .sc-stat-label i { font-size: 8.5px; }
+.status-card .sc-stat-label .ic-use    { color: #3b82f6; }
+.status-card .sc-stat-label .ic-limit  { color: #ec4899; }
+.status-card .sc-stat-label .ic-remain { color: #f59e0b; }
+
+.status-card .sc-stat-value {
+  font-family: 'Plus Jakarta Sans', 'Kanit', sans-serif;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status-card .sc-stat-value.use    { color: #be123c; }
+.status-card .sc-stat-value.limit  { color: #7c3aed; }
+.status-card .sc-stat-value.remain { color: #059669; }
+.status-card[data-state="over"] .sc-stat-value.remain { color: #be123c; }
+
+/* ---------- Progress bar ---------- */
+.status-card .sc-progress {
+  height: 8px;
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+.status-card .sc-progress-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.9s cubic-bezier(0.34, 1.2, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+.status-card .sc-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+  animation: shimmer 2.5s infinite;
+}
+/* สี progress ตามสถานะ */
+.status-card[data-state="safe"]    .sc-progress-fill { background: linear-gradient(90deg, #6ee7b7, #10b981); }
+.status-card[data-state="warning"] .sc-progress-fill { background: linear-gradient(90deg, #fcd34d, #f59e0b); }
+.status-card[data-state="over"]    .sc-progress-fill { background: linear-gradient(90deg, #f43f5e, #e11d48); }
+
+/* Responsive */
+@media (min-width: 768px) {
+  .status-card { padding: 16px; border-radius: 18px; }
+  .status-card .sc-icon { width: 46px; height: 46px; font-size: 18px; }
+  .status-card .sc-name { font-size: 15px; }
+  .status-card .sc-percent { font-size: 22px; padding: 7px 12px; }
+  .status-card .sc-stat-value { font-size: 14px; }
+  .status-card .sc-stat-label { font-size: 10px; }
+  .status-card .sc-progress { height: 9px; }
+}
