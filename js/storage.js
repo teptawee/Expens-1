@@ -83,9 +83,8 @@ function loadDataFromAPI() {
         if (script.parentNode) script.parentNode.removeChild(script);
         reject(new Error('API timeout'));
       }
-    }, 30000);   // ← เพิ่มจาก 15000 เป็น 30000
+    }, 30000);
 
-    // ← แก้: fallback ถ้า body ยังไม่พร้อม
     (document.body || document.head || document.documentElement).appendChild(script);
   });
 }
